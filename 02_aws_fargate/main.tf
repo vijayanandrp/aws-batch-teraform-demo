@@ -20,13 +20,13 @@ data "aws_region" "current" {}
 ################################################################################
 
 module "batch_disabled" {
-  source = "../../.."
+  source = "../terraform/modules/terraform-aws-batch"
 
   create = false
 }
 
 module "batch" {
-  source = "../../.."
+  source = "../terraform/modules/terraform-aws-batch"
 
   instance_iam_role_name        = "${local.name}-ecs-instance"
   instance_iam_role_path        = "/batch/"
