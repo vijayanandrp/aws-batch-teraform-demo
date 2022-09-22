@@ -2,17 +2,19 @@
 # BUCKETS
 SOURCE_BUCKET=$ENV_SOURCE_BUCKET
 TARGET_BUCKET=$ENV_TARGET_BUCKET
-# SYMMETRIC KEY FOR ENCRYPT/DECRYPT
+# OPENSSL SYMMETRIC KEY FOR ENCRYPT/DECRYPT
 KEY_URL=s3://${ENV_SYMMETRIC_KEY}
 # S3 FILE KEY
 FILE_KEY=$ENV_FILE_KEY
-# FLAG TO RUN ENCRYPT
+# FLAG TO RUN ENCRYPT (true|false)
 is_encrypt=$ENV_IS_ENCRYPT
-
+# FLAG TO DELETE DOWNLOADED FILES AT END (true|false)
+is_clean_temp=$ENV_CLEAN_TEMP
 
 SYMMETRIC_FILE="$(basename $KEY_URL)"
 COMPRESS_FILE_KEY=${FILE_KEY}.gz
 ENC_FILE_KEY=${COMPRESS_FILE_KEY}.enc
+DEC_FILE_KEY=decrypted_${FILE_KEY}
 
 CORES=$(nproc --all)
 flag=true
@@ -28,21 +30,17 @@ if ($is_encrypt && $flag); then
     echo "SYMMETRIC_FILE: $SYMMETRIC_FILE";
     echo "CORES: $CORES";
 
-    DEC_FILE_KEY=decrypted_${FILE_KEY}
-
     echo [*] Moving to User Home Directory '>>>'  ${TMP_DIR}
     cd  ${DOWNLOAD_DIR}
     mkdir -p ${TMP_DIR}
     cd ${TMP_DIR}
-    pwd
-    date; ls -larthi;
+    pwd; date; ls -larthi;
 
     echo [*] Download Symmetric Key File ${KEY_URL}... 
     rm -rf ${SYMMETRIC_FILE}
     aws s3 cp ${KEY_URL} .
     date; ls -larthi;
     echo $'\n'
-
 
     echo [*] Download File ${FILE_KEY} from S3 Bucket ${SOURCE_BUCKET} 
     rm -rf ${FILE_KEY}
@@ -75,16 +73,13 @@ else
     echo "TARGET_BUCKET: $TARGET_BUCKET";
     echo "KEY_URL: $KEY_URL";
     echo "SYMMETRIC_FILE: $SYMMETRIC_FILE";
-    echo "CORES: $CORES";
-
-    DEC_FILE_KEY=decrypted_${FILE_KEY}
+    echo "CORES: $CORES"
 
     echo [*] Moving to User Home Directory '>>>'  ${TMP_DIR}
     cd  ${DOWNLOAD_DIR}
     mkdir -p ${TMP_DIR}
     cd ${TMP_DIR}
-    pwd
-    date; ls -larthi;
+    pwd; date; ls -larthi;
 
     echo [*] Download Symmetric Key File ${KEY_URL}... 
     rm -rf ${SYMMETRIC_FILE}
@@ -119,11 +114,10 @@ else
     echo   ############# Decrypt Ends ###################  $'\n'
 fi
 
-if ($ENV_CLEAN_TEMP && $flag); then
+if ($is_clean_temp && $flag); then
     echo [*] Deleting all files & remove dir ...
-    cd ..;
+    cd ..
     rm -rf ${TMP_DIR};
 fi
-pwd
-date; ls -larthi;
+pwd; date; ls -larthi;
 
