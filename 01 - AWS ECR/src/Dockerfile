@@ -7,6 +7,8 @@ FROM amazon/aws-cli:latest
 #RUN sudo yum update
 #RUN sudo yum -y install which unzip
 
+RUN sudo yum install -y tar gzip pigz
+
 ADD encrypt_decrypt_service.sh /usr/local/bin/encrypt_decrypt_service.sh
 WORKDIR /tmp
 USER nobody
