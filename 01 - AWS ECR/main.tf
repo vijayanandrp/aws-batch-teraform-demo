@@ -16,8 +16,8 @@ provider "aws" {
   region = "us-east-1"
 }
 
-module "demo-batch" {
+module "encrypt-decrypt" {
   source      = "../.."
-  image_name  = "demo-batch-s3-docker"
+  image_name  = "encrypt-decrypt-s3-docker"
   source_path = "${path.module}/src"
 }
