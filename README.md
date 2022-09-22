@@ -1,4 +1,26 @@
-# AWS Batch Terraform module
+
+### Manual steps
+1. Adding User - Roles permission
+2. S3 bucket creation
+3. Samples files push to S3 bucket 
+
+### How to create a symmetric key?
+`openssl rand 256 > symmetric_keyfile.key`
+
+### How to use pigz?
+
+`$ pigz -9 -k -p4 LinuxShellTipsBackup.iso`
+
+The command options:
+```
+-9: Provides the best compression (High compression).
+-k: Retains the original file.
+-p4: Tells Pigz to use 4 processor cores since it’s multi-core oriented.
+More processor cores make the compression process faster. 
+The number of processor cores you choose to use should depend on the processor properties of your machine 
+e.g. Core i3, Core i5, Core i7.
+```
+
 
 ## goal
 1. Create Li
@@ -7,9 +29,6 @@ Terraform module which creates AWS Batch resources.
 readme
 
 
-User - Roles permission
-S3 bucket
-files push
 
 00_ecr - https://github.com/vijayanandrp/terraform-aws-batch-demo/tree/master/examples/terraform-aws-ecr-docker-image/examples/batch-s3-docker
 
