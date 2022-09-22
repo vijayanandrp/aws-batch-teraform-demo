@@ -1,7 +1,7 @@
 # ENVIRONMENTAL VARIABLES
 # BUCKETS
 SOURCE_BUCKET=$ENV_SOURCE_BUCKET
-DESTINATION_BUCKET=$ENV_DESTINATION_BUCKET
+TARGET_BUCKET=$ENV_TARGET_BUCKET
 # SYMMETRIC KEY FOR ENCRYPT/DECRYPT
 KEY_URL=s3://${ENV_SYMMETRIC_KEY}
 # S3 FILE KEY
@@ -23,7 +23,7 @@ if ($is_encrypt && $flag); then
     echo   ############# Encrypt Starts ################### 
     echo "FILE_KEY: $FILE_KEY";
     echo "SOURCE_BUCKET: $SOURCE_BUCKET";
-    echo "DESTINATION_BUCKET: $DESTINATION_BUCKET";
+    echo "TARGET_BUCKET: $TARGET_BUCKET";
     echo "KEY_URL: $KEY_URL";
     echo "SYMMETRIC_FILE: $SYMMETRIC_FILE";
     echo "CORES: $CORES";
@@ -62,9 +62,9 @@ if ($is_encrypt && $flag); then
     rm -rf ${ENC_FILE_KEY}
     openssl enc -in ${COMPRESS_FILE_KEY} -out ${ENC_FILE_KEY} -e -aes256 -k ${SYMMETRIC_FILE}
 
-    echo [*] Upload Encrypted File ${ENC_FILE_KEY} to S3 Bucket s3://${DESTINATION_BUCKET}/${ENC_FILE_KEY}
-    aws s3 cp  ${ENC_FILE_KEY}  s3://${DESTINATION_BUCKET}/${ENC_FILE_KEY} --no-progress
-    aws s3 ls s3://${DESTINATION_BUCKET}/${ENC_FILE_KEY}
+    echo [*] Upload Encrypted File ${ENC_FILE_KEY} to S3 Bucket s3://${TARGET_BUCKET}/${ENC_FILE_KEY}
+    aws s3 cp  ${ENC_FILE_KEY}  s3://${TARGET_BUCKET}/${ENC_FILE_KEY} --no-progress
+    aws s3 ls s3://${TARGET_BUCKET}/${ENC_FILE_KEY}
     date; ls -larthi;
     echo $'\n'
     echo   ############# Encrypt Ends ###################
@@ -72,7 +72,7 @@ else
     echo   ############# Decrypt Starts ################### 
     echo "FILE_KEY: $FILE_KEY";
     echo "SOURCE_BUCKET: $SOURCE_BUCKET";
-    echo "DESTINATION_BUCKET: $DESTINATION_BUCKET";
+    echo "TARGET_BUCKET: $TARGET_BUCKET";
     echo "KEY_URL: $KEY_URL";
     echo "SYMMETRIC_FILE: $SYMMETRIC_FILE";
     echo "CORES: $CORES";
@@ -110,10 +110,10 @@ else
     date; ls -larthi;
     echo $'\n'
 
-    echo [*] Upload File ${FILE_KEY} '>>>'  S3 Bucket  s3://${DESTINATION_BUCKET}/${DEC_FILE_KEY}
+    echo [*] Upload File ${FILE_KEY} '>>>'  S3 Bucket  s3://${TARGET_BUCKET}/${DEC_FILE_KEY}
     echo "Hash sha1sum - $(sha1sum ${FILE_KEY})"
-    aws s3 cp  ${FILE_KEY}  s3://${DESTINATION_BUCKET}/${DEC_FILE_KEY}  --no-progress
-    aws s3 ls  s3://${DESTINATION_BUCKET}/${DEC_FILE_KEY}
+    aws s3 cp  ${FILE_KEY}  s3://${TARGET_BUCKET}/${DEC_FILE_KEY}  --no-progress
+    aws s3 ls  s3://${TARGET_BUCKET}/${DEC_FILE_KEY}
     date; ls -larthi;
     echo $'\n'
     echo   ############# Decrypt Ends ###################  $'\n'
