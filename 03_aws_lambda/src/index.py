@@ -10,6 +10,8 @@ def lambda_handler(event, context):
     jobDefinition='batch-ex-fargate:2',
     jobName='demo_lambda_batch_1',
     jobQueue='HighPriorityFargate',
+    shareIdentifier='A1*',
+    schedulingPriority=0,
     containerOverrides={
         'environment': [
             {
