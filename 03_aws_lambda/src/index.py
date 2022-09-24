@@ -2,7 +2,6 @@ import boto3
 
 client = boto3.client('batch')
 
-
 def lambda_handler(event, context):
     print("Hello from app1!")
     
@@ -11,8 +10,10 @@ def lambda_handler(event, context):
     jobName='demo_lambda_batch_1',
     jobQueue='HighPriorityFargate',
     shareIdentifier='A1*',
-    schedulingPriority=0,
+    schedulingPriorityOverride=0,
     containerOverrides={
+        'vcpus': 1,
+        'memory': 2048,
         'environment': [
             {
                 'name': 'BATCH_FILE_S3_URL',
@@ -43,7 +44,11 @@ def lambda_handler(event, context):
                 'value': 's3://s3-encrypt-demo-batch/symmetric_keyfile.key',
             }
         ]
-        },)
+        },
+       timeout={
+        'attemptDurationSeconds': 3000
+    },
+    )
 
     print(response)
     return event
