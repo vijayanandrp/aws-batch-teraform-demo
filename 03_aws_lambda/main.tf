@@ -11,8 +11,6 @@ module "lambda_function" {
   source = "terraform-aws-modules/lambda/aws"
   version = "v4.0.2"
 
-  publish = true
-
   function_name = "${random_pet.this.id}-lambda-batch-simple-demo"
   description   = "Trigger the AWS Batch from Lambda Function"
   handler       = "index.lambda_handler"
