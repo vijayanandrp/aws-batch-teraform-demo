@@ -26,5 +26,5 @@ module "lambda_function" {
   ]
   
   create_role = false
-  lambda_role = aws_iam_role.lambda.arn
+  lambda_role = "EtlLambdaRole"
 }
