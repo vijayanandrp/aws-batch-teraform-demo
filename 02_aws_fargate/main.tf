@@ -124,9 +124,9 @@ module "batch" {
 
       container_properties = jsonencode({
         command = ["ls", "-la"]
-        #image   = "public.ecr.aws/runecast/busybox:1.33.1"
 	## Below ECR Image URL should be updated.
-        image    = "697350684613.dkr.ecr.us-east-1.amazonaws.com/demo-batch-s3-docker:latest"
+        image    = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker:latest"
+	#image   = "public.ecr.aws/runecast/busybox:1.33.1"
         fargatePlatformConfiguration = {
           platformVersion = "LATEST"
         },
@@ -162,7 +162,7 @@ module "batch" {
       }
 
       tags = {
-        JobDefinition = "Example"
+        JobDefinition = "S3 files - encrypt and decrypt using openssl and  pigz (gzip)"
       }
     }
   }
