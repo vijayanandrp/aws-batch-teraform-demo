@@ -4,7 +4,7 @@ provider "aws" {
 
 locals {
   region = "us-east-1"
-  name   = "batch-s3-file-encrypt-decrypt-service"
+  name   = "batch-s3-enc-dec"
 
   tags = {
     Name       = local.name
@@ -124,9 +124,9 @@ module "batch" {
 
       container_properties = jsonencode({
         command = ["ls", "-la"]
-	## Below ECR Image URL should be updated.
+	      ## Below ECR Image URL should be updated.
         image    = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker:latest"
-	#image   = "public.ecr.aws/runecast/busybox:1.33.1"
+	      #image   = "public.ecr.aws/runecast/busybox:1.33.1"
         fargatePlatformConfiguration = {
           platformVersion = "LATEST"
         },
