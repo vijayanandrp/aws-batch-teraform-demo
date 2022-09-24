@@ -12,8 +12,6 @@ def lambda_handler(event, context):
     shareIdentifier='A1*',
     schedulingPriorityOverride=0,
     containerOverrides={
-        'vcpus': 1,
-        'memory': 2048,
         'environment': [
             {
                 'name': 'BATCH_FILE_S3_URL',
