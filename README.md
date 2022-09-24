@@ -11,6 +11,10 @@
 ### 01 - Pre-request inside EC2 Instance (AWS Linux 2) ec2-user
 
 ```bash
+cd ~
+
+sudo su
+
 uname -a
 
 sudo amazon-linux-extras install epel -y
@@ -45,7 +49,7 @@ aws s3 ls
 
 `sudo service docker start`
 
-## 02 - Terraform Steps
+## 02 - Terraform Steps with Sudo SU permissions 
 
 Step_01: `terraform init`
 
