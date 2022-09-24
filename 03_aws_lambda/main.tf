@@ -13,7 +13,7 @@ module "lambda_function" {
 
   publish = true
 
-  function_name = "${random_pet.this.id}-lambda-simple-demo"
+  function_name = "${random_pet.this.id}-lambda-batch-simple-demo"
   handler       = "index.lambda_handler"
   runtime       = "python3.8"
 
