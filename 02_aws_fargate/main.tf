@@ -4,7 +4,7 @@ provider "aws" {
 
 locals {
   region = "us-east-1"
-  name   = "batch-s3-file-encrypt-decrypt"
+  name   = "batch-s3-file-encrypt-decrypt-service"
 
   tags = {
     Name       = local.name
