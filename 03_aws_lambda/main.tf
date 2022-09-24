@@ -6,21 +6,8 @@ resource "random_pet" "this" {
   length = 2
 }
 
-data "aws_iam_policy_document" "assume_role" {
-  statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["lambda.amazonaws.com"]
-    }
-  }
-}
-
 resource "aws_iam_role" "lambda" {
-  name                  = "EtlLambdaRole"
-  assume_role_policy    = data.aws_iam_policy_document.assume_role.json
+  name   = "EtlLambdaRole"
 }
 
 
@@ -34,7 +21,7 @@ module "lambda_function" {
   description   = "Trigger the AWS Batch from Lambda Function"
   handler       = "index.lambda_handler"
   runtime       = "python3.9"
-  role          = aws_iam_role.iam_for_lambda.arn
+  role          = "EtlLambdaRole"
 
   attach_policies = true
   policies = ["arn:aws:iam::aws:policy/AWSBatchFullAccess"]
