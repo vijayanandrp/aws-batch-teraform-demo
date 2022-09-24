@@ -7,12 +7,12 @@ def lambda_handler(event, context):
     
     response = client.submit_job(
     jobDefinition='batch-ex-fargate:2',
-    jobName='demo_lambda_batch_2',
+    jobName='demo_lambda_batch_3',
     jobQueue='HighPriorityFargate',
     shareIdentifier='A1*',
     schedulingPriorityOverride=0,
     containerOverrides={
-        'command': ["file_crypto_service.bash","60"],
+        'command': ["file_crypto_service.bash", "60"],
         'environment': [
             {
                 'name': 'BATCH_FILE_S3_URL',
