@@ -4,7 +4,7 @@ provider "aws" {
 
 locals {
   region = "us-east-1"
-  name   = "batch-ex-${replace(basename(path.cwd), "_", "-")}"
+  name   = "batch-s3-${replace(basename(path.cwd), "_", "-")}"
 
   tags = {
     Name       = local.name
@@ -20,22 +20,22 @@ data "aws_region" "current" {}
 ################################################################################
 
 module "batch_disabled" {
-  source = "../.."
+  source = "../../terraform/modules/terraform-aws-batch"
 
   create = false
 }
 
 module "batch" {
-  source = "../.."
+  source = "../../terraform/modules/terraform-aws-batch"
 
-  instance_iam_role_name        = "${local.name}-ecs-instance"
+  instance_iam_role_name        = "${local.name}-ecs-instance-new"
   instance_iam_role_path        = "/batch/"
   instance_iam_role_description = "IAM instance role/profile for AWS Batch ECS instance(s)"
   instance_iam_role_tags = {
     ModuleCreatedRole = "Yes"
   }
 
-  service_iam_role_name        = "${local.name}-batch"
+  service_iam_role_name        = "${local.name}-batch-new"
   service_iam_role_path        = "/batch/"
   service_iam_role_description = "IAM service role for AWS Batch"
   service_iam_role_tags = {
@@ -43,7 +43,7 @@ module "batch" {
   }
 
   create_spot_fleet_iam_role      = true
-  spot_fleet_iam_role_name        = "${local.name}-spot"
+  spot_fleet_iam_role_name        = "${local.name}-spot-new"
   spot_fleet_iam_role_path        = "/batch/"
   spot_fleet_iam_role_description = "IAM spot fleet role for AWS Batch"
   spot_fleet_iam_role_tags = {
@@ -83,7 +83,7 @@ module "batch" {
   # Job queus and scheduling policies
   job_queues = {
     low_priority = {
-      name     = "LowPriorityFargate"
+      name     = "LowPriorityFargate_new"
       state    = "ENABLED"
       priority = 1
 
@@ -93,7 +93,7 @@ module "batch" {
     }
 
     high_priority = {
-      name     = "HighPriorityFargate"
+      name     = "HighPriorityFargate_new"
       state    = "ENABLED"
       priority = 99
 
@@ -162,7 +162,7 @@ module "batch" {
       }
 
       tags = {
-        JobDefinition = "Example"
+        JobDefinition = "S3 files encrypt decrypt compress crypto services"
       }
     }
   }
