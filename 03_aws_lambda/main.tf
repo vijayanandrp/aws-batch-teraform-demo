@@ -22,7 +22,4 @@ module "lambda_function" {
   source_path = [
     "${path.module}/src/index.py",
   ]
-  
-  create_role = false
-  lambda_role = "EtlLambdaRole"
 }
