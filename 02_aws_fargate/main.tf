@@ -4,7 +4,7 @@ provider "aws" {
 
 locals {
   region = "us-east-1"
-  name   = "batch-s3-file-${replace(basename(path.cwd), "_", "-")}"
+  name   = "batch-s3-file-encrypt-decrypt"
 
   tags = {
     Name       = local.name
