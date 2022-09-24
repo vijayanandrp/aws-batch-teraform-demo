@@ -6,10 +6,6 @@ resource "random_pet" "this" {
   length = 2
 }
 
-resource "aws_iam_role" "lambda" {
-  name   = "EtlLambdaRole"
-}
-
 
 module "lambda_function" {
   source = "terraform-aws-modules/lambda/aws"
@@ -21,7 +17,6 @@ module "lambda_function" {
   description   = "Trigger the AWS Batch from Lambda Function"
   handler       = "index.lambda_handler"
   runtime       = "python3.9"
-  role          = "EtlLambdaRole"
 
   attach_policies = true
   policies = ["arn:aws:iam::aws:policy/AWSBatchFullAccess"]
