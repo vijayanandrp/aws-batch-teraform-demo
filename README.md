@@ -1,11 +1,58 @@
-
 ### Manual steps
 1. Adding User - Roles permission
 2. S3 bucket creation
 3. Samples files push to S3 bucket 
 
-### How to create a symmetric key?
+## Deployment Steps:
+
+ We cannot use **AWS Cloudshell** to run terraform script. 
+  We can run it either locally or launch an **AWS EC2**  instance to run this.
+
+### 01 - Pre-request inside EC2 Instance (AWS Linux 2) ec2-user
+
+```bash
+uname -a
+
+sudo amazon-linux-extras install epel -y
+
+sudo yum install yum-utils  -y
+
+sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+
+sudo yum install terraform  -y
+
+sudo amazon-linux-extras install docker -y
+
+sudo yum install git -y
+```
+
+To start Docker service in the EC2
+
+`service docker start`
+
+## 02 - Terraform Steps
+
+Step_01: `terraform init`
+
+Step_02: `terraform plan`
+
+To create the stack,
+Step_03: `terraform apply --auto-approve`
+
+To destroy the stack,
+Step_04:`terraform destroy --auto-approve`
+
+
+
+#### Reference:  
+https://aws.amazon.com/blogs/compute/creating-a-simple-fetch-and-run-aws-batch-job/
+
+
+
+
+### How to create a symmetric key file? 
 `openssl rand 256 > symmetric_keyfile.key`
+**NOTE**: Upload to S3  
 
 ### How to use pigz?
 
@@ -21,20 +68,6 @@ The number of processor cores you choose to use should depend on the processor p
 e.g. Core i3, Core i5, Core i7.
 ```
 
-
-## goal
-1. Create Li
-
-Terraform module which creates AWS Batch resources.
-readme
-
-
-
-00_ecr - https://github.com/vijayanandrp/terraform-aws-batch-demo/tree/master/examples/terraform-aws-ecr-docker-image/examples/batch-s3-docker
-
-01_fargate
-
-02_python
 
 https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/batch.html#Batch.Client.submit_job
 ## Usage
