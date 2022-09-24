@@ -18,7 +18,7 @@ module "lambda_function" {
   runtime       = "python3.8"
 
   attach_policies = true
-  policies = ["arn:aws:iam::aws:policy/AWSBatchFullAccess"]
+  policies = ["arn:aws:iam::697350684613:role/EtlLambdaRole"]
   
   source_path = [
     "${path.module}/src/index.py",
