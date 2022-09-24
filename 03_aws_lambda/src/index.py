@@ -7,7 +7,7 @@ def lambda_handler(event, context):
     
     response = client.submit_job(
     jobDefinition='batch-ex-fargate:2',
-    jobName='demo_lambda_batch_1',
+    jobName='demo_lambda_batch_2',
     jobQueue='HighPriorityFargate',
     shareIdentifier='A1*',
     schedulingPriorityOverride=0,
@@ -16,35 +16,35 @@ def lambda_handler(event, context):
         'environment': [
             {
                 'name': 'BATCH_FILE_S3_URL',
-                'value': 's3://s3-encrypt-demo-batch/file_crypto_service.bash',
+                'value': 's3://s3-encrypt-demo-batch/file_crypto_service.bash'
             },
             {
                 'name': 'BATCH_FILE_TYPE',
-                'value': 'script',
+                'value': 'script'
             },
             {
                 'name': 'ENV_SOURCE_BUCKET',
-                'value': 's3-encrypt-demo-batch',
+                'value': 's3-encrypt-demo-batch'
             },
             {
                 'name': 'ENV_TARGET_BUCKET',
-                'value': 's3-encrypt-demo-batch',
+                'value': 's3-encrypt-demo-batch'
             },
             {
                 'name': 'ENV_FILE_KEY',
-                'value': 'testData.csv',
+                'value': 'testData.csv'
             },
             {
                 'name': 'ENV_IS_ENCRYPT',
-                'value': 'true',
+                'value': 'true'
             },
             {
                 'name': 'ENV_CLEAN_TEMP',
-                'value': 'true',
+                'value': 'true'
             },
             {
-                'name': 'ENV_FILE_KEY',
-                'value': 's3://s3-encrypt-demo-batch/symmetric_keyfile.key',
+                'name': 'ENV_SYMMETRIC_KEY',
+                'value': 's3://s3-encrypt-demo-batch/symmetric_keyfile.key'
             }
         ]
         },
