@@ -1,13 +1,8 @@
 FROM amazon/aws-cli:latest
 
-#FROM amazonlinux:latest
-
-#RUN yum -y install java
-#RUN amazon-linux-extras install epel -y
-#RUN sudo yum update
-#RUN sudo yum -y install which unzip
-
-RUN yum install -y tar gzip pigz
+RUN uname -a
+RUN yum install gcc openssl-devel bzip2-devel libffi-devel gzip make -y
+RUN yum install -y tar gzip pigz openssl
 
 ADD encrypt_decrypt_service.sh /usr/local/bin/encrypt_decrypt_service.sh
 WORKDIR /tmp
