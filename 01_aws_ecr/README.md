@@ -5,15 +5,17 @@
  We cannot use **AWS Cloudshell** to run terraform script. 
   We can run it either locally or launch an **AWS EC2**  instance to run this.
 
-### 01 - Pre-request
+### 01 - Pre-request in EC2 Instance 
+
 `sudo yum install -y yum-utils`
 
 `sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo`
 
 `sudo yum -y install terraform`
 
-
 `amazon-linux-extras install docker`
+
+To start Docker service in the EC2
 
 `service docker start`
 
