@@ -69,7 +69,9 @@ https://aws.amazon.com/blogs/compute/creating-a-simple-fetch-and-run-aws-batch-j
 
 ### How to create a symmetric key file? 
 `openssl rand 256 > symmetric_keyfile.key`
-**NOTE**: Upload to S3  
+**NOTE**: Upload to S3  Demo Bucket
+
+Also upload the `crytpo_file_service.bash` to same bucket
 
 ### How to use pigz?
 
