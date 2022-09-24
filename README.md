@@ -24,11 +24,26 @@ sudo yum install terraform  -y
 sudo amazon-linux-extras install docker -y
 
 sudo yum install git -y
+
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+
+unzip awscliv2.zip
+
+sudo ./aws/install
+
+./aws/install -i /usr/local/aws-cli -b /usr/local/bin
+ 
+aws configure
+ 
+# AWS Access Key ID [None]: 
+# AWS Secret Access Key [None]
+
+aws s3 ls
 ```
 
-To start Docker service in the EC2
+### To start Docker service in the EC2
 
-`service docker start`
+`sudo service docker start`
 
 ## 02 - Terraform Steps
 
@@ -36,11 +51,9 @@ Step_01: `terraform init`
 
 Step_02: `terraform plan`
 
-To create the stack,
-Step_03: `terraform apply --auto-approve`
+Step_03: `terraform apply --auto-approve` To create the stack
 
-To destroy the stack,
-Step_04:`terraform destroy --auto-approve`
+Step_04:`terraform destroy --auto-approve` To destroy the stack
 
 
 
