@@ -1,9 +1,11 @@
+#!/bin/bash
+
 # ENVIRONMENTAL VARIABLES
 # BUCKETS
 SOURCE_BUCKET=$ENV_SOURCE_BUCKET
 TARGET_BUCKET=$ENV_TARGET_BUCKET
 # OPENSSL SYMMETRIC KEY FOR ENCRYPT/DECRYPT
-KEY_URL=s3://${ENV_SYMMETRIC_KEY}
+KEY_URL=${ENV_SYMMETRIC_KEY}
 # S3 FILE KEY
 FILE_KEY=$ENV_FILE_KEY
 # FLAG TO RUN ENCRYPT (true|false)
@@ -18,8 +20,12 @@ DEC_FILE_KEY=decrypted_${FILE_KEY}
 
 CORES=$(nproc --all)
 flag=true
-DOWNLOAD_DIR=~
+DOWNLOAD_DIR=/tmp
 TMP_DIR=tmp_encrypt
+
+whoami
+sudo su
+whoami
 
 if ($is_encrypt && $flag); then
     echo   ############# Encrypt Starts ################### 
