@@ -12,10 +12,15 @@ def lambda_handler(event, context):
     shareIdentifier='A1*',
     schedulingPriorityOverride=0,
     containerOverrides={
+        'command': ["file_crypto_service.bash","60"],
         'environment': [
             {
                 'name': 'BATCH_FILE_S3_URL',
                 'value': 's3://s3-encrypt-demo-batch/file_crypto_service.bash',
+            },
+            {
+                'name': 'BATCH_FILE_TYPE',
+                'value': 'script',
             },
             {
                 'name': 'ENV_SOURCE_BUCKET',
