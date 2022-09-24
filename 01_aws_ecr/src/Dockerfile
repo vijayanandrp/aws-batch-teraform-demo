@@ -4,9 +4,8 @@ RUN uname -a
 RUN yum install gcc openssl-devel bzip2-devel libffi-devel gzip make -y
 RUN yum install -y tar gzip pigz openssl
 
-ADD encrypt_decrypt_service.sh /usr/local/bin/encrypt_decrypt_service.sh
+ADD fetch_and_run.sh /usr/local/bin/fetch_and_run.sh
 WORKDIR /tmp
 USER nobody
 
-
-ENTRYPOINT ["/usr/local/bin/encrypt_decrypt_service.sh"]
+ENTRYPOINT ["/usr/local/bin/fetch_and_run.sh"]
