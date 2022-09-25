@@ -1,12 +1,12 @@
-### Manual steps
-1. Adding User - Roles permission
-2. S3 bucket creation
-3. Samples files push to S3 bucket 
+## Manual steps
+1. Adding User - Roles/Policies for get necessary permissions
+2. S3 Demo bucket creation Example - `s3-encrypt-demo-batch`
+3. Samples files push to S3 bucket. `Crypto_file_Services.bash` `symmetric_keyfile.key`
 
 ## Deployment Steps:
 
- We cannot use **AWS Cloudshell** to run terraform script. 
-  We can run it either locally or launch an **AWS EC2**  instance to run this.
+We cannot use **AWS Cloudshell** to run terraform script. 
+Rather, We can run it either locally or launch an **AWS EC2**  instance to run this.
 
 ### 01 - Pre-request inside EC2 Instance (AWS Linux 2) ec2-user
 
