@@ -38,7 +38,7 @@ sudo ./aws/install
 ./aws/install -i /usr/local/aws-cli -b /usr/local/bin
  
 aws configure
- 
+# This token from a USER ROLE should have neccessary actions to create docker and upload ECR 
 # AWS Access Key ID [None]: 
 # AWS Secret Access Key [None]
 
@@ -58,11 +58,6 @@ Step_02: `terraform plan`
 Step_03: `terraform apply --auto-approve` To create the stack
 
 Step_04:`terraform destroy --auto-approve` To destroy the stack
-
-
-
-#### Reference:  
-https://aws.amazon.com/blogs/compute/creating-a-simple-fetch-and-run-aws-batch-job/
 
 
 
@@ -87,9 +82,68 @@ The number of processor cores you choose to use should depend on the processor p
 e.g. Core i3, Core i5, Core i7.
 ```
 
+### AWS Lambda Trigger 
+```python
+def lambda_handler(event, context):
+    print("Hello from app1!")
+    
+    response = client.submit_job(
+    jobDefinition='batch-ex-fargate:2',
+    jobName='demo_lambda_batch_3',
+    jobQueue='HighPriorityFargate',
+    shareIdentifier='A1*',
+    schedulingPriorityOverride=0,
+    containerOverrides={
+        'command': ["file_crypto_service.bash", "60"],
+        'environment': [
+            {
+                'name': 'BATCH_FILE_S3_URL',
+                'value': 's3://s3-encrypt-demo-batch/file_crypto_service.bash'
+            },
+            {
+                'name': 'BATCH_FILE_TYPE',
+                'value': 'script'
+            },
+            {
+                'name': 'ENV_SOURCE_BUCKET',
+                'value': 's3-encrypt-demo-batch'
+            },
+            {
+                'name': 'ENV_TARGET_BUCKET',
+                'value': 's3-encrypt-demo-batch'
+            },
+            {
+                'name': 'ENV_FILE_KEY',
+                'value': 'testData.csv'
+            },
+            {
+                'name': 'ENV_IS_ENCRYPT',
+                'value': 'true'
+            },
+            {
+                'name': 'ENV_CLEAN_TEMP',
+                'value': 'true'
+            },
+            {
+                'name': 'ENV_SYMMETRIC_KEY',
+                'value': 's3://s3-encrypt-demo-batch/symmetric_keyfile.key'
+            }
+        ]
+        },
+       timeout={
+        'attemptDurationSeconds': 3000
+    },
+    )
 
-https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/batch.html#Batch.Client.submit_job
+    print(response)
+    ```
+
+
+#### Reference:  
+https://aws.amazon.com/blogs/compute/creating-a-simple-fetch-and-run-aws-batch-job/
+
 ## Usage
+https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/batch.html#Batch.Client.submit_job
 
 See [`examples`](https://github.com/terraform-aws-modules/terraform-aws-batch/tree/master/examples) directory for working examples to reference:
 
