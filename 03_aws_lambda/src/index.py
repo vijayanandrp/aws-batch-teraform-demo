@@ -2,13 +2,21 @@ import boto3
 
 client = boto3.client('batch')
 
+def get_random_string(length):
+    # With combination of lower and upper case
+    result_str = ''.join(random.choice(string.ascii_letters) for i in range(length))
+    # print random string
+    print(result_str)
+
 def lambda_handler(event, context):
-    print("Hello from app1!")
+    job_name='demo_lambda_encrypt_batch_' + get_random_string(8)
+    print('job_name', job_name)
+    
     
     response = client.submit_job(
     jobDefinition='batch-ex-fargate:2',
-    jobName='demo_lambda_batch_3',
     jobQueue='HighPriorityFargate',
+    jobName=job_name,
     shareIdentifier='A1*',
     schedulingPriorityOverride=0,
     containerOverrides={
@@ -54,4 +62,4 @@ def lambda_handler(event, context):
     )
 
     print(response)
-    return event
+    return {'jobName': job_name}
