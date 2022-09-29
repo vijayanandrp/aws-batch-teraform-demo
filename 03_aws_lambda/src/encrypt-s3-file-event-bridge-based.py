@@ -14,7 +14,7 @@ config = {
 'shareIdentifier': 'A1*',
 'schedulingPriorityOverride': 0,
 'command': ["file_crypto_service.bash", "60"],
-'BATCH_FILE_S3_URL': 's3://source-raw-data-bktcode/code/file_crypto_service.bash'
+'BATCH_FILE_S3_URL': 's3://source-raw-data-bktcode/code/file_crypto_service.bash',
 'BATCH_FILE_TYPE': 'script',
 'ENV_SOURCE_BUCKET': 'source_bucket', # Fetched from eventbridge events 
 'ENV_TARGET_BUCKET': 's3-encrypt-demo-batch',
