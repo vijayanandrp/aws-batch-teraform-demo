@@ -132,7 +132,7 @@ module "batch" {
         },
         resourceRequirements = [
           { type = "VCPU", value = "4" },
-          { type = "MEMORY", value = "16384" }
+          { type = "MEMORY", value = "32768" }
         ],
         executionRoleArn = aws_iam_role.ecs_task_execution_role.arn
         jobRoleArn       = aws_iam_role.ecs_task_execution_role.arn
