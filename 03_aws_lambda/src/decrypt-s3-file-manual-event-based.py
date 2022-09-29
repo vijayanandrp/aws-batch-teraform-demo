@@ -21,6 +21,7 @@ config = {
 'jobName': 'decrypt_batch_' + get_random_string(8),
 'shareIdentifier': 'A1*',
 'schedulingPriorityOverride': 0,
+ "resourceRequirements": [{"type": "MEMORY", "value": "2048" }, {"type": "VCPU", "value": "1" }], # Cannot override Batch jobdefinition
 'command': ["file_crypto_service.bash", "60"],
 'BATCH_FILE_S3_URL': 's3://source-raw-data-bkt/code/file_crypto_service.bash',
 'BATCH_FILE_TYPE': 'script',
@@ -113,7 +114,7 @@ def lambda_handler(event: dict = None, context: dict = None):
         jobName=config['jobName'],
         shareIdentifier=config['shareIdentifier'],
         schedulingPriorityOverride=config['schedulingPriorityOverride'],
-        containerOverrides={ 'command': config['command'], 'environment': environment },
+        containerOverrides={ "resourceRequirements": config['resourceRequirements'], 'command': config['command'], 'environment': environment },
         timeout={ 'attemptDurationSeconds': 3000 })
                             
     log.info(response)
