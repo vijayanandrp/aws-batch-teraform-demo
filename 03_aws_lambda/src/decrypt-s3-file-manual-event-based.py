@@ -115,7 +115,7 @@ def lambda_handler(event: dict = None, context: dict = None):
         shareIdentifier=config['shareIdentifier'],
         schedulingPriorityOverride=config['schedulingPriorityOverride'],
         containerOverrides={ "resourceRequirements": config['resourceRequirements'], 'command': config['command'], 'environment': environment },
-        timeout={ 'attemptDurationSeconds': 3000 })
+        timeout={ 'attemptDurationSeconds': 7200 })
                             
     log.info(response)
     
