@@ -10,7 +10,7 @@ def get_random_string(length):
 config = {
 'jobDefinition': 'batch-ex-fargate:2', # created based fargate terraform deployment
 'jobQueue': 'HighPriorityFargate',
-'jobName': 'demo_lambda_encrypt_batch_' + get_random_string(8),
+'jobName': 'encrypt_batch_' + get_random_string(8),
 'shareIdentifier': 'A1*',
 'schedulingPriorityOverride': 0,
 'command': ["file_crypto_service.bash", "60"],
