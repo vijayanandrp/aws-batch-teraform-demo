@@ -9,7 +9,7 @@ import string
 Sample_Event = {
   "file_key": "data.csv",
   "source_bucket": "source-raw-data-bkt",
-  "destination_bucket": "target-output-data-bkt"
+  "target_bucket": "target-output-data-bkt"
 }
 
 def get_random_string(length):
