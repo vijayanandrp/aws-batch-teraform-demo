@@ -102,17 +102,15 @@ def lambda_handler(event: dict = None, context: dict = None):
         ]
         
         log.info(f"environment - {environment}")
+        
         response = client.submit_job(
             jobDefinition=config['jobDefinition'], # created based fargate terraform deployment
             jobQueue=config['jobQueue'],
             jobName=config['jobName'],
             shareIdentifier=config['shareIdentifier'],
             schedulingPriorityOverride=config['schedulingPriorityOverride'],
-            containerOverrides={
-                'command': config['command'],
-                'environment': environment },
-            timeout={ 'attemptDurationSeconds': 3000 }
-        )
+            containerOverrides={'command': config['command'], 'environment': environment },
+            timeout={ 'attemptDurationSeconds': 3000 })
 
         log.info(response)
         return {'jobName': job_name, 'environment': environment}
