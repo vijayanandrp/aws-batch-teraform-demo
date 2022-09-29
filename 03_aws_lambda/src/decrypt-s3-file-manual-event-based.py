@@ -113,8 +113,9 @@ def lambda_handler(event: dict = None, context: dict = None):
         jobName=config['jobName'],
         shareIdentifier=config['shareIdentifier'],
         schedulingPriorityOverride=config['schedulingPriorityOverride'],
-        containerOverrides={ 'command': config['command'], environment': environment },
+        containerOverrides={ 'command': config['command'], 'environment': environment },
         timeout={ 'attemptDurationSeconds': 3000 })
                             
     log.info(response)
+    
     return {'jobName': job_name, 'environment': environment}
