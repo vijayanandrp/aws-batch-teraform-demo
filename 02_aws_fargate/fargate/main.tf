@@ -130,9 +130,10 @@ module "batch" {
         fargatePlatformConfiguration = {
           platformVersion = "LATEST"
         },
+	# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-batch-jobdefinition-resourcerequirement.html
         resourceRequirements = [
-          { type = "VCPU", value = "8" },
-          { type = "MEMORY", value = "32768" }
+          { type = "VCPU", value = "4" },
+          { type = "MEMORY", value = "30720" }
         ],
         executionRoleArn = aws_iam_role.ecs_task_execution_role.arn
         jobRoleArn       = aws_iam_role.ecs_task_execution_role.arn
