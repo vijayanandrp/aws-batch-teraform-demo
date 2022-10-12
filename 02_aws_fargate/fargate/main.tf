@@ -83,7 +83,7 @@ module "batch" {
   # Job queus and scheduling policies
   job_queues = {
     low_priority = {
-      name     = "LowPriorityFargate_new"
+      name     = "LowPriorityFargate_1"
       state    = "ENABLED"
       priority = 1
 
@@ -93,7 +93,7 @@ module "batch" {
     }
 
     high_priority = {
-      name     = "HighPriorityFargate_new"
+      name     = "HighPriorityFargate_1"
       state    = "ENABLED"
       priority = 99
 
@@ -132,7 +132,7 @@ module "batch" {
         },
         resourceRequirements = [
           { type = "VCPU", value = "8" },
-          { type = "MEMORY", value = "64000" }
+          { type = "MEMORY", value = "32768" }
         ],
         executionRoleArn = aws_iam_role.ecs_task_execution_role.arn
         jobRoleArn       = aws_iam_role.ecs_task_execution_role.arn
