@@ -56,7 +56,7 @@ module "batch" {
 
       compute_resources = {
         type      = "FARGATE"
-        max_vcpus = 4
+        max_vcpus = 8
 
         security_group_ids = [module.vpc_endpoint_security_group.security_group_id]
         subnets            = module.vpc.private_subnets
@@ -70,7 +70,7 @@ module "batch" {
 
       compute_resources = {
         type      = "FARGATE_SPOT"
-        max_vcpus = 4
+        max_vcpus = 8
 
         security_group_ids = [module.vpc_endpoint_security_group.security_group_id]
         subnets            = module.vpc.private_subnets
@@ -131,8 +131,8 @@ module "batch" {
           platformVersion = "LATEST"
         },
         resourceRequirements = [
-          { type = "VCPU", value = "4" },
-          { type = "MEMORY", value = "32768" }
+          { type = "VCPU", value = "8" },
+          { type = "MEMORY", value = "64000" }
         ],
         executionRoleArn = aws_iam_role.ecs_task_execution_role.arn
         jobRoleArn       = aws_iam_role.ecs_task_execution_role.arn
