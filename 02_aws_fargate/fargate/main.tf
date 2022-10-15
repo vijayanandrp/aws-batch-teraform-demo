@@ -9,8 +9,7 @@ locals {
   tags = {
     Name       = local.name
     Example    = local.name
-	created-by = "terraform"
-    Repository = "https://github.com/terraform-aws-modules/terraform-aws-batch"
+    created-by = "terraform"
   }
 }
 
@@ -134,7 +133,7 @@ module "batch" {
           platformVersion = "LATEST"
         },
 		
-		    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-batch-jobdefinition-resourcerequirement.html
+	# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-batch-jobdefinition-resourcerequirement.html
         resourceRequirements = [
           { type = "VCPU", value = "4" },
           { type = "MEMORY", value = "30720" }
@@ -150,7 +149,7 @@ module "batch" {
         ],
 
         # https://aws.amazon.com/premiumsupport/knowledge-center/ecs-fargate-mount-efs-containers-tasks/
-	      mountPoints = [
+	mountPoints = [
           {
             sourceVolume =  "efs_temp",
             containerPath = "/tmp",
@@ -171,9 +170,7 @@ module "batch" {
         }
 		
       })
-	  
 
-	
       attempt_duration_seconds = 60
       retry_strategy = {
         attempts = 3
