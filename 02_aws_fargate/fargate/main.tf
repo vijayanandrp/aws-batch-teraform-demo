@@ -123,12 +123,10 @@ module "batch" {
       platform_capabilities = ["FARGATE"]
 
       container_properties = jsonencode({
-        command = ["ls", "-la;", "sudo", "mount", "-t", "nfs4", "-o",
-		"nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport",
-		"fs-077f7572ac9f4d4b0.efs.us-east-1.amazonaws.com:/", "efs"]
+        command = ["ls", "-la;"]
 		
-        #image   = "public.ecr.aws/runecast/busybox:1.33.1"
-		    ## Below ECR Image URL should be updated.
+        # image   = "public.ecr.aws/runecast/busybox:1.33.1"
+	## Below ECR Image URL should be updated.
         image    = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker:latest"
 		
         fargatePlatformConfiguration = {
