@@ -279,6 +279,8 @@ resource "aws_efs_file_system" "efs" {
 	
 	creation_token = "enc-dec-efs-fs"
 	
+	encrypted = true
+	
 	# Creating the AWS EFS lifecycle policy
 	# Amazon EFS supports two lifecycle policies. Transition into IA and Transition out of IA
 	# Transition into IA transition files into the file systems's Infrequent Access storage class
