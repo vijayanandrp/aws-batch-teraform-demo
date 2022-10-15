@@ -139,24 +139,6 @@ module "batch" {
           { type = "MEMORY", value = "30720" }
         ],
 
-        volumes = [
-            {
-                name = "efs_temp",
-                efsVolumeConfiguration = {
-                fileSystemId = aws_efs_file_system.efs.id
-                }
-            }
-        ],
-
-        # https://aws.amazon.com/premiumsupport/knowledge-center/ecs-fargate-mount-efs-containers-tasks/
-	mountPoints = [
-          {
-            sourceVolume =  "efs_temp",
-            containerPath = "/tmp",
-            readOnly = false
-          }
-        ],
-
         executionRoleArn = aws_iam_role.ecs_task_execution_role.arn
         jobRoleArn       = aws_iam_role.ecs_task_execution_role.arn
 		
@@ -168,6 +150,24 @@ module "batch" {
             awslogs-stream-prefix = local.name
           }
         }
+	# volumes = [
+	# {
+	# 	name = "efs_temp",
+	# 	efsVolumeConfiguration = {
+	# 		fileSystemId = aws_efs_file_system.efs.id
+	# 	}
+	# }
+	# ],
+
+	# # https://aws.amazon.com/premiumsupport/knowledge-center/ecs-fargate-mount-efs-containers-tasks/
+	# mountPoints = [
+	# 	{
+	# 		sourceVolume =  "efs_temp",
+	# 		containerPath = "/tmp",
+	# 		readOnly = false
+	# 	}
+	# ],
+
 		
       })
 
@@ -332,30 +332,30 @@ resource "aws_efs_file_system_policy" "policy" {
 	# The EFS System Policy allows clients to mount, read and perform 
 	# write operations on File system 
 	# The communication of client and EFS is set using aws:secureTransport Option
-	  policy = <<POLICY
+	policy = <<POLICY
 	{
-		"Version": "2012-10-17",
-		"Id": "Policy01",
-		"Statement": [
-			{
-				"Sid": "Statement",
-				"Effect": "Allow",
-				"Principal": {
-					"AWS": "*"
-				},
-				"Resource": "${aws_efs_file_system.efs.arn}",
-				"Action": [
-					"elasticfilesystem:ClientMount",
-					"elasticfilesystem:ClientRootAccess",
-					"elasticfilesystem:ClientWrite"
-				],
-				"Condition": {
-					"Bool": {
-						"aws:SecureTransport": "false"
-					}
+	"Version": "2012-10-17",
+	"Id": "Policy01",
+	"Statement": [
+		{
+			"Sid": "Statement",
+			"Effect": "Allow",
+			"Principal": {
+				"AWS": "*"
+			},
+			"Resource": "${aws_efs_file_system.efs.arn}",
+			"Action": [
+				"elasticfilesystem:ClientMount",
+				"elasticfilesystem:ClientRootAccess",
+				"elasticfilesystem:ClientWrite"
+			],
+			"Condition": {
+				"Bool": {
+					"aws:SecureTransport": "false"
 				}
 			}
-		]
+		}
+	]
 	}
 	POLICY
 }
@@ -368,3 +368,4 @@ resource "aws_efs_mount_target" "mount" {
 	subnet_id       = tolist(module.vpc.private_subnets)[count.index]
 	security_groups = [module.vpc_endpoint_security_group.security_group_id]
 }
+
