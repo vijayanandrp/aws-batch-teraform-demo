@@ -263,15 +263,6 @@ module "vpc_endpoint_security_group" {
 
   egress_cidr_blocks = ["0.0.0.0/0"]
   egress_rules       = ["https-443-tcp"]
-   egress = {
-    from_port = 0
-    to_port = 0
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Open to all outgoing traffic"
-  }
-
-
   tags = local.tags
 }
 
