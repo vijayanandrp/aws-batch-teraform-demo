@@ -256,12 +256,21 @@ module "vpc_endpoint_security_group" {
       from_port   = 2049
       to_port     = 2049
       protocol    = "tcp"
-      description = "EFS to VPC endpoint service"
+      description = "EFS (NFS) to VPC endpoint service"
+      self        = true
     },
   ]
 
   egress_cidr_blocks = ["0.0.0.0/0"]
   egress_rules       = ["https-443-tcp"]
+   egress = {
+    from_port = 0
+    to_port = 0
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Open to all outgoing traffic"
+  }
+
 
   tags = local.tags
 }
