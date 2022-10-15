@@ -140,6 +140,15 @@ module "batch" {
           { type = "MEMORY", value = "30720" }
         ],
 
+        volumes = [
+            {
+                name = "efs_temp",
+                efsVolumeConfiguration = {
+                fileSystemId = aws_efs_file_system.efs.id
+                }
+            }
+        ],
+
         # https://aws.amazon.com/premiumsupport/knowledge-center/ecs-fargate-mount-efs-containers-tasks/
 	      mountPoints = [
           {
@@ -163,14 +172,7 @@ module "batch" {
 		
       })
 	  
-    volumes = [
-        {
-            name = "efs_temp",
-            efsVolumeConfiguration = {
-            fileSystemId = aws_efs_file_system.efs.id
-            }
-        }
-    ],
+
 	
       attempt_duration_seconds = 60
       retry_strategy = {
