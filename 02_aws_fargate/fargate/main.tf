@@ -127,19 +127,28 @@ module "batch" {
         command = ["ls", "-la"]
 		
         #image   = "public.ecr.aws/runecast/busybox:1.33.1"
-		## Below ECR Image URL should be updated.
+		    ## Below ECR Image URL should be updated.
         image    = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker:latest"
 		
         fargatePlatformConfiguration = {
           platformVersion = "LATEST"
         },
 		
-		# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-batch-jobdefinition-resourcerequirement.html
+		    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-batch-jobdefinition-resourcerequirement.html
         resourceRequirements = [
           { type = "VCPU", value = "4" },
           { type = "MEMORY", value = "30720" }
         ],
-		
+
+        # https://aws.amazon.com/premiumsupport/knowledge-center/ecs-fargate-mount-efs-containers-tasks/
+	      mountPoints = [
+          {
+            sourceVolume =  "efs_temp",
+            containerPath = "/tmp",
+            readOnly = false
+          }
+        ],
+
         executionRoleArn = aws_iam_role.ecs_task_execution_role.arn
         jobRoleArn       = aws_iam_role.ecs_task_execution_role.arn
 		
@@ -154,15 +163,15 @@ module "batch" {
 		
       })
 	  
-	  # https://aws.amazon.com/premiumsupport/knowledge-center/ecs-fargate-mount-efs-containers-tasks/
-	   mountPoints = [
-          {
-            sourceVolume =  "efs_temp",
-            containerPath = "/tmp",
-            readOnly = false
-          }
-        ],
-
+    volumes = [
+        {
+            name = "efs_temp",
+            efsVolumeConfiguration = {
+            fileSystemId = aws_efs_file_system.efs.id
+            }
+        }
+    ],
+	
       attempt_duration_seconds = 60
       retry_strategy = {
         attempts = 3
