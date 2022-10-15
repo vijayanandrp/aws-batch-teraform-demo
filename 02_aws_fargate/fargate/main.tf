@@ -252,6 +252,12 @@ module "vpc_endpoint_security_group" {
       description = "Container to VPC endpoint service"
       self        = true
     },
+    {
+      from_port   = 2049
+      to_port     = 2049
+      protocol    = "tcp"
+      description = "EFS to VPC endpoint service"
+    },
   ]
 
   egress_cidr_blocks = ["0.0.0.0/0"]
