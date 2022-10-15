@@ -313,7 +313,7 @@ resource "aws_efs_file_system" "efs" {
 	# Transition into IA transition files into the file systems's Infrequent Access storage class
 	# Transition files out of IA storage
 	lifecycle_policy {
-		transition_to_ia = "AFTER_30_DAYS"
+		transition_to_ia = "AFTER_7_DAYS"
 	}
 	
 	# Tagging the EFS File system with its value as efs
