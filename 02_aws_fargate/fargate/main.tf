@@ -153,6 +153,15 @@ module "batch" {
         }
 		
       })
+	  
+	  # https://aws.amazon.com/premiumsupport/knowledge-center/ecs-fargate-mount-efs-containers-tasks/
+	   mountPoints = [
+          {
+            sourceVolume =  "efs_temp",
+            containerPath = "/tmp",
+            readOnly = false
+          }
+        ],
 
       attempt_duration_seconds = 60
       retry_strategy = {
@@ -274,6 +283,7 @@ resource "aws_cloudwatch_log_group" "this" {
   tags = local.tags
 }
 
+# https://adamtheautomator.com/terraform-efs/
 # Creating Amazon EFS File system
 resource "aws_efs_file_system" "efs" {
 	
