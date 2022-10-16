@@ -259,7 +259,9 @@ module "vpc_endpoint_security_group" {
       from_port   = 2049
       to_port     = 2049
       protocol    = "tcp"
-      description = "EFS (NFS) to VPC endpoint service"
+      description = "EFS (NFS)"
+      self        = true
+      cidr_blocks = null
       self        = true
     },
   ]
