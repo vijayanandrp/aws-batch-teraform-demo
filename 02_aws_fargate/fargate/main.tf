@@ -124,16 +124,16 @@ module "batch" {
 
       container_properties = jsonencode({
         command = ["ls", "-la;"]
-		
+        
         # image   = "public.ecr.aws/runecast/busybox:1.33.1"
-	## Below ECR Image URL should be updated.
+        ## Below ECR Image URL should be updated.
         image    = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker:latest"
-		
+        
         fargatePlatformConfiguration = {
           platformVersion = "LATEST"
         },
-		
-	# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-batch-jobdefinition-resourcerequirement.html
+        
+    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-batch-jobdefinition-resourcerequirement.html
         resourceRequirements = [
           { type = "VCPU", value = "4" },
           { type = "MEMORY", value = "30720" }
@@ -141,7 +141,7 @@ module "batch" {
 
         executionRoleArn = aws_iam_role.ecs_task_execution_role.arn
         jobRoleArn       = aws_iam_role.ecs_task_execution_role.arn
-		
+        
         logConfiguration = {
           logDriver = "awslogs"
           options = {
@@ -150,25 +150,31 @@ module "batch" {
             awslogs-stream-prefix = local.name
           }
         }
-	# volumes = [
-	# {
-	# 	name = "efs_temp",
-	# 	efsVolumeConfiguration = {
-	# 		fileSystemId = aws_efs_file_system.efs.id
-	# 	}
-	# }
-	# ],
 
-	# # https://aws.amazon.com/premiumsupport/knowledge-center/ecs-fargate-mount-efs-containers-tasks/
-	# mountPoints = [
-	# 	{
-	# 		sourceVolume =  "efs_temp",
-	# 		containerPath = "/tmp",
-	# 		readOnly = false
-	# 	}
-	# ],
+        volumes = [
+        {
+          name = "efs",
+          host = {
+            sourcePath = "/mnt/efs"
+          },
+          efsVolumeConfiguration = {
+            fileSystemId            = aws_efs_file_system.efs.id
+            transitEncryption       = "ENABLED"
+            transit_encryption_port = 2049
+          }
+        }
+        ],
 
-		
+        # https://aws.amazon.com/premiumsupport/knowledge-center/ecs-fargate-mount-efs-containers-tasks/
+        mountPoints = [
+            {
+                sourceVolume  = "efs",
+                containerPath = "/mnt/efs",
+                readOnly      = false
+            }
+        ],
+
+          
       })
 
       attempt_duration_seconds = 60
@@ -297,75 +303,85 @@ resource "aws_cloudwatch_log_group" "this" {
   tags = local.tags
 }
 
-# https://adamtheautomator.com/terraform-efs/
-# Creating Amazon EFS File system
-resource "aws_efs_file_system" "efs" {
-	
-	creation_token = "enc-dec-efs-fs"
-	
-	encrypted = true
-	
-	# Creating the AWS EFS lifecycle policy
-	# Amazon EFS supports two lifecycle policies. Transition into IA and Transition out of IA
-	# Transition into IA transition files into the file systems's Infrequent Access storage class
-	# Transition files out of IA storage
-	lifecycle_policy {
-		transition_to_ia = "AFTER_7_DAYS"
-	}
-	
-	# Tagging the EFS File system with its value as efs
-	tags = {
-		Name = "enc-dec-efs-fs"
-	}
-}
-
-# Creating the EFS access point for AWS EFS File system
-resource "aws_efs_access_point" "test" {
-	file_system_id = aws_efs_file_system.efs.id
-}
+#######################################################################
+# # EFS
+#######################################################################
 
 # Creating the AWS EFS System policy to transition files into and out of the file system.
 resource "aws_efs_file_system_policy" "policy" {
 
-	file_system_id = aws_efs_file_system.efs.id
+    file_system_id = aws_efs_file_system.efs.id
   
-	# The EFS System Policy allows clients to mount, read and perform 
-	# write operations on File system 
-	# The communication of client and EFS is set using aws:secureTransport Option
-	policy = <<POLICY
-	{
-	"Version": "2012-10-17",
-	"Id": "Policy01",
-	"Statement": [
-		{
-			"Sid": "Statement",
-			"Effect": "Allow",
-			"Principal": {
-				"AWS": "*"
-			},
-			"Resource": "${aws_efs_file_system.efs.arn}",
-			"Action": [
-				"elasticfilesystem:ClientMount",
-				"elasticfilesystem:ClientRootAccess",
-				"elasticfilesystem:ClientWrite"
-			],
-			"Condition": {
-				"Bool": {
-					"aws:SecureTransport": "false"
-				}
-			}
-		}
-	]
-	}
-	POLICY
+    # The EFS System Policy allows clients to mount, read and perform 
+    # write operations on File system 
+    # The communication of client and EFS is set using aws:secureTransport Option
+    policy = <<POLICY
+    {
+    "Version": "2012-10-17",
+    "Id": "Policy01",
+    "Statement": [
+        {
+            "Sid": "Statement",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "*"
+            },
+            "Resource": "${aws_efs_file_system.efs.arn}",
+            "Action": [
+                "elasticfilesystem:ClientMount",
+                "elasticfilesystem:ClientRootAccess",
+                "elasticfilesystem:ClientWrite"
+            ],
+            "Condition": {
+                "Bool": {
+                    "aws:SecureTransport": "true"
+                }
+            }
+        }
+    ]
+    }
+    POLICY
+}
+
+# https://adamtheautomator.com/terraform-efs/
+# Creating Amazon EFS File system
+resource "aws_efs_file_system" "efs" {
+    
+    creation_token = "enc-dec-efs-fs"
+    
+    encrypted = true
+    
+    # Creating the AWS EFS lifecycle policy
+    # Amazon EFS supports two lifecycle policies. Transition into IA and Transition out of IA
+    # Transition into IA transition files into the file systems's Infrequent Access storage class
+    # Transition files out of IA storage
+    lifecycle_policy {
+        transition_to_ia = "AFTER_7_DAYS"
+    }
+    
+    # Tagging the EFS File system with its value as efs
+    tags = {
+        Name = "enc-dec-efs-fs"
+    }
+}
+
+# Creating the EFS access point for AWS EFS File system
+resource "aws_efs_access_point" "test" {
+    file_system_id = aws_efs_file_system.efs.id
 }
 
 # Creating the AWS EFS Mount point in a specified Subnet 
 # AWS EFS Mount point uses File system ID to launch.
 resource "aws_efs_mount_target" "mount" {
-	file_system_id  = aws_efs_file_system.efs.id
-	count           = length(module.vpc.private_subnets)
-	subnet_id       = tolist(module.vpc.private_subnets)[count.index]
-	security_groups = [module.vpc_endpoint_security_group.security_group_id]
+    file_system_id  = aws_efs_file_system.efs.id
+    count           = length(module.vpc.private_subnets)
+    subnet_id       = tolist(module.vpc.private_subnets)[count.index]
+    security_groups = [module.vpc_endpoint_security_group.security_group_id]
 }
 
+resource "aws_efs_access_point" "test" {
+  file_system_id = aws_efs_file_system.efs.id
+  root_directory {
+    path = "/"
+  }
+}
