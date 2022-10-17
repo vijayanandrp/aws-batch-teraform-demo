@@ -26,7 +26,12 @@ sudo usermod -a -G docker ec2-user
 
 #start docker cloudshell
 sudo systemctl enable docker
+sudo systemctl start docker
+sudo dockerd
 sudo usermod -a -G docker cloudshell-user
+
+# debug
+docker info
 
 # install awscli
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
