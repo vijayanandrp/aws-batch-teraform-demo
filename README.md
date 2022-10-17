@@ -12,42 +12,34 @@ Rather, We can run it either locally or launch an **AWS EC2**  instance to run t
 
 ```bash
 cd ~
-
-sudo su
-
-uname -a
-
+# Install Packages
 sudo amazon-linux-extras install epel -y
-
 sudo yum install yum-utils  -y
-
 sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-
 sudo yum install terraform  -y
-
 sudo amazon-linux-extras install docker -y
-
 sudo yum install git -y
 
+# start docker ec2
+sudo service docker start
+sudo usermod -a -G docker ec2-user
+
+#start docker cloudshell
+sudo systemctl enable docker
+sudo usermod -a -G docker cloudshell-user
+
+# install awscli
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-
 unzip awscliv2.zip
-
 sudo ./aws/install
-
 ./aws/install -i /usr/local/aws-cli -b /usr/local/bin
- 
-aws configure
+
 # This token from a USER ROLE should have neccessary actions to create docker and upload ECR 
 # AWS Access Key ID [None]: 
 # AWS Secret Access Key [None]
-
+aws configure
 aws s3 ls
 ```
-
-### To start Docker service in the EC2
-
-`sudo service docker start`
 
 ## 02 - Terraform Steps with Sudo SU permissions 
 
