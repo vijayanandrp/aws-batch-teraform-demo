@@ -58,7 +58,7 @@ module "batch" {
         type      = "FARGATE"
         max_vcpus = 8
 
-        security_group_ids = [module.vpc_endpoint_security_group.security_group_id]
+        security_group_ids = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
         subnets            = module.vpc.private_subnets
 
         # `tags = {}` here is not applicable for spot
@@ -72,7 +72,7 @@ module "batch" {
         type      = "FARGATE_SPOT"
         max_vcpus = 8
 
-        security_group_ids = [module.vpc_endpoint_security_group.security_group_id]
+        security_group_ids = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
         subnets            = module.vpc.private_subnets
 
         # `tags = {}` here is not applicable for spot
@@ -125,9 +125,9 @@ module "batch" {
       container_properties = jsonencode({
         command = ["ls", "-la;"]
         
-        # image   = "public.ecr.aws/runecast/busybox:1.33.1"
+        image   = "public.ecr.aws/runecast/busybox:1.33.1"
         ## Below ECR Image URL should be updated.
-        image    = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker:latest"
+        #image    = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker:latest"
         
         fargatePlatformConfiguration = {
           platformVersion = "LATEST"
@@ -135,8 +135,8 @@ module "batch" {
         
     # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-batch-jobdefinition-resourcerequirement.html
         resourceRequirements = [
-          { type = "VCPU", value = "4" },
-          { type = "MEMORY", value = "30720" }
+          { type = "VCPU", value = "1" },
+          { type = "MEMORY", value = "4096" }
         ],
 
         executionRoleArn = aws_iam_role.ecs_task_execution_role.arn
@@ -154,9 +154,9 @@ module "batch" {
         volumes = [
         {
           name = "efs",
-          host = {
-            sourcePath = "/mnt/efs"
-          },
+          # host = {
+          #   sourcePath = "/mnt/efs"
+          # },
           efsVolumeConfiguration = {
             fileSystemId            = aws_efs_file_system.efs.id
             transitEncryption       = "ENABLED"
@@ -239,13 +239,46 @@ module "vpc" {
 }
 
 
-module "vpc_endpoint_security_group" {
+module "vpc_batch_security_group" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "~> 4.0"
 
   name        = "${local.name}-vpc-endpoint"
   description = "Security group for VPC endpoints"
   vpc_id      = module.vpc.vpc_id
+
+  egress_with_cidr_blocks = [
+    {
+      from_port   = 0
+      to_port     = 65535
+      protocol    = "tcp"
+      description = "egress ports"
+      cidr_blocks = "0.0.0.0/0"
+    }
+  ]
+  tags = local.tags
+}
+
+module "vpc_efs_security_group" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "~> 4.0"
+
+  name        = "${local.name}-efs-sg"
+  description = "Security group for EFS"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress_with_source_security_group_id = [
+    {
+      description              = "https from service one"
+      rule                     = "https-443-tcp"
+      source_security_group_id = module.vpc_batch_security_group.security_group_id
+    },
+    {
+      description              = "nfs from service one"
+      rule                     = "nfs-tcp"
+      source_security_group_id = module.vpc_batch_security_group.security_group_id
+    }
+  ]
 
   ingress_with_self = [
     {
@@ -267,10 +300,9 @@ module "vpc_endpoint_security_group" {
   ]
 
   egress_cidr_blocks = ["0.0.0.0/0"]
-  egress_rules       = ["https-443-tcp"]
+  egress_rules       = ["all-all"]
   tags = local.tags
 }
-
 
 resource "aws_iam_role" "ecs_task_execution_role" {
   name               = "${local.name}-ecs-task-exec"
@@ -378,12 +410,5 @@ resource "aws_efs_mount_target" "mount" {
     file_system_id  = aws_efs_file_system.efs.id
     count           = length(module.vpc.private_subnets)
     subnet_id       = tolist(module.vpc.private_subnets)[count.index]
-    security_groups = [module.vpc_endpoint_security_group.security_group_id]
-}
-
-resource "aws_efs_access_point" "test" {
-  file_system_id = aws_efs_file_system.efs.id
-  root_directory {
-    path = "/"
-  }
+    security_groups = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
 }
