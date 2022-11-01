@@ -367,7 +367,7 @@ resource "aws_efs_file_system_policy" "policy" {
 # Creating Amazon EFS File system
 resource "aws_efs_file_system" "efs" {
     
-    creation_token = "enc-dec-efs-fs"
+    creation_token = "${local.name}-efs"
     
     encrypted = true
     
