@@ -76,7 +76,7 @@ module "batch" {
         max_vcpus = 8
 
         security_group_ids = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
-        subnets            = data.aws_subnets.example.ids
+        subnets            =   "${slice(data.aws_subnets.example.ids, 0 , 16 )}"
 
         # `tags = {}` here is not applicable for spot
       }
@@ -90,7 +90,7 @@ module "batch" {
         max_vcpus = 8
 
         security_group_ids = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
-        subnets            = data.aws_subnets.example.ids
+        subnets            =  "${slice(data.aws_subnets.example.ids, 0 , 16 )}"
 
         # `tags = {}` here is not applicable for spot
       }
@@ -100,7 +100,7 @@ module "batch" {
   # Job queus and scheduling policies
   job_queues = {
     low_priority = {
-      name     = "LowPriorityFargate"
+      name     = "LowPriorityFargate_2"
       state    = "ENABLED"
       priority = 1
 
@@ -112,7 +112,7 @@ module "batch" {
     }
 
     high_priority = {
-      name     = "HighPriorityFargate"
+      name     = "HighPriorityFargate_2"
       state    = "ENABLED"
       priority = 99
 
