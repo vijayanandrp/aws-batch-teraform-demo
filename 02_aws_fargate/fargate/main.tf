@@ -16,6 +16,15 @@ locals {
 
 data "aws_region" "current" {}
 
+data "aws_subnet_ids" "test_subnet_ids" {
+  vpc_id = local.vpc_id
+}
+data "aws_subnet" "test_subnet" {
+  count = "${length(data.aws_subnet_ids.test_subnet_ids.ids)}"
+  id    = "${tolist(data.aws_subnet_ids.test_subnet_ids.ids)[count.index]}"
+}
+
+
 ################################################################################
 # Batch Module
 ################################################################################
@@ -60,7 +69,7 @@ module "batch" {
         max_vcpus = 8
 
         security_group_ids = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
-        subnets            = module.vpc.private_subnets
+        subnets            = "${data.aws_subnet_ids.example.ids}"
 
         # `tags = {}` here is not applicable for spot
       }
@@ -74,7 +83,7 @@ module "batch" {
         max_vcpus = 8
 
         security_group_ids = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
-        subnets            = module.vpc.private_subnets
+        subnets            = "${data.aws_subnet_ids.example.ids}"
 
         # `tags = {}` here is not applicable for spot
       }
@@ -208,40 +217,6 @@ module "batch" {
 ################################################################################
 # Supporting Resources
 ################################################################################
-
-
-/* module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 3.0"
-
-  name = local.name
-  cidr = "10.99.0.0/18"
-
-  azs             = ["${local.region}a", "${local.region}b", "${local.region}c"]
-  public_subnets  = ["10.99.0.0/24", "10.99.1.0/24", "10.99.2.0/24"]
-  private_subnets = ["10.99.3.0/24", "10.99.4.0/24", "10.99.5.0/24"]
-
-  enable_nat_gateway      = true
-  single_nat_gateway      = true
-  map_public_ip_on_launch = false
-
-  public_route_table_tags  = { Name = "${local.name}-public" }
-  public_subnet_tags       = { Name = "${local.name}-public" }
-  private_route_table_tags = { Name = "${local.name}-private" }
-  private_subnet_tags      = { Name = "${local.name}-private" }
-
-  manage_default_security_group  = true
-  default_security_group_name    = "${local.name}-default"
-  default_security_group_ingress = []
-  default_security_group_egress  = []
-
-  enable_dhcp_options      = true
-  enable_dns_hostnames     = true
-  dhcp_options_domain_name = data.aws_region.current.name == "us-east-1" ? "ec2.internal" : "${data.aws_region.current.name}.compute.internal"
-
-  tags = local.tags
-} */
-
 
 module "vpc_batch_security_group" {
   source  = "terraform-aws-modules/security-group/aws"
@@ -414,7 +389,7 @@ resource "aws_efs_access_point" "test" {
 # AWS EFS Mount point uses File system ID to launch.
 resource "aws_efs_mount_target" "mount" {
     file_system_id  = aws_efs_file_system.efs.id
-    count           = length(module.vpc.private_subnets)
-    subnet_id       = tolist(module.vpc.private_subnets)[count.index]
+    count           = "${data.aws_subnet_ids.example.ids}"
+    subnet_id       = tolist("${data.aws_subnet_ids.example.ids}")[count.index]
     security_groups = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
 }
