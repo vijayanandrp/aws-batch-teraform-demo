@@ -16,14 +16,21 @@ locals {
 
 data "aws_region" "current" {}
 
-data "aws_subnet" "default_ids" {
-  vpc_id = local.vpc_id
-}
-data "aws_subnet" "default" {
-  count = "${length(data.aws_subnet.default_ids.ids)}"
-  id    = "${tolist(data.aws_subnet.default_ids.ids)[count.index]}"
+data "aws_subnets" "example" {
+  filter {
+    name   = "vpc-id"
+    values = [local.vpc_id]
+  }
 }
 
+data "aws_subnet" "example" {
+  for_each = toset(data.aws_subnets.example.ids)
+  id       = each.value
+}
+
+output "subnet_cidr_blocks" {
+  value = [for s in data.aws_subnet.example : s.cidr_block]
+}
 
 ################################################################################
 # Batch Module
@@ -69,7 +76,7 @@ module "batch" {
         max_vcpus = 8
 
         security_group_ids = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
-        subnets            = "${data.aws_subnet.default_ids.ids}"
+        subnets            = data.aws_subnets.example.ids
 
         # `tags = {}` here is not applicable for spot
       }
@@ -83,7 +90,7 @@ module "batch" {
         max_vcpus = 8
 
         security_group_ids = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
-        subnets            = "${data.aws_subnet.default_ids.ids}"
+        subnets            = data.aws_subnets.example.ids
 
         # `tags = {}` here is not applicable for spot
       }
@@ -389,7 +396,7 @@ resource "aws_efs_access_point" "test" {
 # AWS EFS Mount point uses File system ID to launch.
 resource "aws_efs_mount_target" "mount" {
     file_system_id  = aws_efs_file_system.efs.id
-    count           = "${data.aws_subnet.default_ids.ids}"
-    subnet_id       = tolist("${data.aws_subnet.default_ids.ids}")[count.index]
+    count           = length(data.aws_subnets.example.ids)
+    subnet_id       = tolist(data.aws_subnets.example.ids)[count.index]
     security_groups = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
 }
