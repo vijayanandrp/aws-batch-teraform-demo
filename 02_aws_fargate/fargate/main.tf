@@ -6,6 +6,7 @@ locals {
   region = "us-east-1"
   name   = "enc-dec-${replace(basename(path.cwd), "_", "-")}"
   owner = "etl"
+  vpc_id = "vpc-0a1c11083c4812965"
 
   tags = {
     Owner        = local.owner
@@ -248,7 +249,7 @@ module "vpc_batch_security_group" {
 
   name        = "${local.name}-vpc-endpoint"
   description = "Security group for VPC endpoints"
-  vpc_id      = module.vpc.vpc_id # HARDOCE VPC_ID
+  vpc_id      = local.vpc_id # HARDOCE VPC_ID
 
   egress_with_cidr_blocks = [
     {
@@ -268,7 +269,7 @@ module "vpc_efs_security_group" {
 
   name        = "${local.name}-efs-sg"
   description = "Security group for EFS"
-  vpc_id      = module.vpc.vpc_id # HARDCODE VPC_ID
+  vpc_id      = local.vpc_id # HARDCODE VPC_ID
 
   ingress_with_source_security_group_id = [
     {
