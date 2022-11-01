@@ -32,6 +32,11 @@ output "subnet_cidr_blocks" {
   value = [for s in data.aws_subnet.example : s.cidr_block]
 }
 
+resource "aws_subnet" "batch_subnet" {
+    vpc_id = "${local.vpc_id}"
+    cidr_block = "10.3.5.0/24"
+    tags = local.tags
+}
 ################################################################################
 # Batch Module
 ################################################################################
@@ -76,7 +81,7 @@ module "batch" {
         max_vcpus = 8
 
         security_group_ids = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
-        subnets            =   "${slice(data.aws_subnets.example.ids, 0 , 16 )}"
+        subnets            =   aws_subnets.batch_subnet.ids
 
         # `tags = {}` here is not applicable for spot
       }
@@ -90,7 +95,7 @@ module "batch" {
         max_vcpus = 8
 
         security_group_ids = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
-        subnets            =  "${slice(data.aws_subnets.example.ids, 0 , 16 )}"
+        subnets            =  aws_subnets.batch_subnet.ids
 
         # `tags = {}` here is not applicable for spot
       }
@@ -381,7 +386,7 @@ resource "aws_efs_file_system" "efs" {
     
     # Tagging the EFS File system with its value as efs
     tags = {
-        Name      = "enc-dec-efs-fs"
+        Name      = "${local.name}-efs"
         Owner     = local.owner
         Purpose   = local.owner
     }
@@ -396,7 +401,7 @@ resource "aws_efs_access_point" "test" {
 # AWS EFS Mount point uses File system ID to launch.
 resource "aws_efs_mount_target" "mount" {
     file_system_id  = aws_efs_file_system.efs.id
-    count           = length(data.aws_subnets.example.ids)
-    subnet_id       = tolist(data.aws_subnets.example.ids)[count.index]
+    count           = length(aws_subnets.batch_subnet.ids)
+    subnet_id       = tolist(aws_subnets.batch_subnet.ids)[count.index]
     security_groups = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
 }
