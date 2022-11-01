@@ -16,22 +16,6 @@ locals {
 
 data "aws_region" "current" {}
 
-data "aws_subnet" "example" {
-  filter {
-    name   = "vpc-id"
-    values = [local.vpc_id]
-  }
-}
-
-data "aws_subnet" "example" {
-  for_each = toset(data.aws_subnet.example.ids)
-  id       = each.value
-}
-
-output "subnet_cidr_blocks" {
-  value = [for s in data.aws_subnet.example : s.cidr_block]
-}
-
 resource "aws_subnet" "batch_subnet" {
     vpc_id = "${local.vpc_id}"
     cidr_block = "10.3.5.0/24"
