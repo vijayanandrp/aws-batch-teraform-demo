@@ -5,11 +5,11 @@ provider "aws" {
 locals {
   region = "us-east-1"
   name   = "enc-dec-${replace(basename(path.cwd), "_", "-")}"
+  owner = "etl"
 
   tags = {
-    Name       = local.name
-    Example    = local.name
-    created-by = "terraform"
+    Owner        = local.owner
+    Purpose      = local.owner
   }
 }
 
@@ -83,17 +83,19 @@ module "batch" {
   # Job queus and scheduling policies
   job_queues = {
     low_priority = {
-      name     = "LowPriorityFargate_1"
+      name     = "LowPriorityFargate"
       state    = "ENABLED"
       priority = 1
 
       tags = {
-        JobQueue = "Low priority job queue"
+        JobQueue     = "Low priority job queue"
+        Owner        = local.owner
+        Purpose      = local.owner
       }
     }
 
     high_priority = {
-      name     = "HighPriorityFargate_1"
+      name     = "HighPriorityFargate"
       state    = "ENABLED"
       priority = 99
 
@@ -111,7 +113,9 @@ module "batch" {
       }
 
       tags = {
-        JobQueue = "High priority job queue"
+        JobQueue     = "High priority job queue"
+        Owner        = local.owner
+        Purpose      = local.owner
       }
     }
   }
@@ -125,9 +129,9 @@ module "batch" {
       container_properties = jsonencode({
         command = ["ls", "-la;"]
         
-        image   = "public.ecr.aws/runecast/busybox:1.33.1"
+        # image   = "public.ecr.aws/runecast/busybox:1.33.1"
         ## Below ECR Image URL should be updated.
-        #image    = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker:latest"
+        image    = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker:latest"
         
         fargatePlatformConfiguration = {
           platformVersion = "LATEST"
@@ -135,8 +139,8 @@ module "batch" {
         
     # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-batch-jobdefinition-resourcerequirement.html
         resourceRequirements = [
-          { type = "VCPU", value = "1" },
-          { type = "MEMORY", value = "4096" }
+          { type = "VCPU", value = "4" },
+          { type = "MEMORY", value = "30720" }
         ],
 
         executionRoleArn = aws_iam_role.ecs_task_execution_role.arn
@@ -154,9 +158,6 @@ module "batch" {
         volumes = [
         {
           name = "efs",
-          # host = {
-          #   sourcePath = "/mnt/efs"
-          # },
           efsVolumeConfiguration = {
             fileSystemId            = aws_efs_file_system.efs.id
             transitEncryption       = "ENABLED"
@@ -194,6 +195,8 @@ module "batch" {
 
       tags = {
         JobDefinition = "S3 files encrypt decrypt compress crypto services"
+        Owner         = local.owner
+        Purpose       = local.owner
       }
     }
   }
@@ -206,7 +209,7 @@ module "batch" {
 ################################################################################
 
 
-module "vpc" {
+/* module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 3.0"
 
@@ -236,7 +239,7 @@ module "vpc" {
   dhcp_options_domain_name = data.aws_region.current.name == "us-east-1" ? "ec2.internal" : "${data.aws_region.current.name}.compute.internal"
 
   tags = local.tags
-}
+} */
 
 
 module "vpc_batch_security_group" {
@@ -245,7 +248,7 @@ module "vpc_batch_security_group" {
 
   name        = "${local.name}-vpc-endpoint"
   description = "Security group for VPC endpoints"
-  vpc_id      = module.vpc.vpc_id
+  vpc_id      = module.vpc.vpc_id # HARDOCE VPC_ID
 
   egress_with_cidr_blocks = [
     {
@@ -265,7 +268,7 @@ module "vpc_efs_security_group" {
 
   name        = "${local.name}-efs-sg"
   description = "Security group for EFS"
-  vpc_id      = module.vpc.vpc_id
+  vpc_id      = module.vpc.vpc_id # HARDCODE VPC_ID
 
   ingress_with_source_security_group_id = [
     {
@@ -395,7 +398,9 @@ resource "aws_efs_file_system" "efs" {
     
     # Tagging the EFS File system with its value as efs
     tags = {
-        Name = "enc-dec-efs-fs"
+        Name      = "enc-dec-efs-fs"
+        Owner     = local.owner
+        Purpose   = local.owner
     }
 }
 
