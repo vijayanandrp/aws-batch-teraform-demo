@@ -7,6 +7,7 @@ locals {
   name   = "enc-dec-${replace(basename(path.cwd), "_", "-")}"
   owner = "etl"
   vpc_id = "vpc-0a1c11083c4812965"
+  subnet_ids = ["subnet-018f6b67507a505fb", "subnet-00af991b775e92eb8", "subnet-0761f4ba2929ac42d"]
 
   tags = {
     Owner        = local.owner
@@ -16,11 +17,6 @@ locals {
 
 data "aws_region" "current" {}
 
-resource "aws_subnet" "batch_subnet" {
-    vpc_id = "${local.vpc_id}"
-    cidr_block = "10.3.5.0/24"
-    tags = local.tags
-}
 ################################################################################
 # Batch Module
 ################################################################################
@@ -65,7 +61,7 @@ module "batch" {
         max_vcpus = 8
 
         security_group_ids = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
-        subnets            =   aws_subnet.batch_subnet.ids
+        subnets            =   local.subnet_ids
 
         # `tags = {}` here is not applicable for spot
       }
@@ -79,7 +75,7 @@ module "batch" {
         max_vcpus = 8
 
         security_group_ids = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
-        subnets            =  aws_subnet.batch_subnet.ids
+        subnets            =  local.subnet_ids
 
         # `tags = {}` here is not applicable for spot
       }
@@ -385,7 +381,7 @@ resource "aws_efs_access_point" "test" {
 # AWS EFS Mount point uses File system ID to launch.
 resource "aws_efs_mount_target" "mount" {
     file_system_id  = aws_efs_file_system.efs.id
-    count           = length(aws_subnet.batch_subnet.ids)
-    subnet_id       = tolist(aws_subnet.batch_subnet.ids)[count.index]
+    count           = length(local.subnet_ids)
+    subnet_id       = tolist(local.subnet_ids)[count.index]
     security_groups = [module.vpc_efs_security_group.security_group_id, module.vpc_batch_security_group.security_group_id]
 }
