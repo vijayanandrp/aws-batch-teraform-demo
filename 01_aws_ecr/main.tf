@@ -18,6 +18,6 @@ provider "aws" {
 
 module "encrypt-decrypt" {
   source      = "../terraform/modules/terraform-aws-ecr-docker-image"
-  image_name  = "encrypt-decrypt-s3-docker"
+  image_name  = "encrypt-decrypt-s3-docker-image"
   source_path = "${path.module}/src"
 }
