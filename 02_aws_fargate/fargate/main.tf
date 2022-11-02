@@ -133,7 +133,7 @@ module "batch" {
         
         # image   = "public.ecr.aws/runecast/busybox:1.33.1"
         ## Below ECR Image URL should be updated.
-        image    = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker:latest"
+        image    = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker-image:latest"
         
         fargatePlatformConfiguration = {
           platformVersion = "LATEST"
