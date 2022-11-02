@@ -9,6 +9,9 @@ ADD fetch_and_run.sh /usr/local/bin/fetch_and_run.sh
 RUN chmod +x /usr/local/bin/fetch_and_run.sh
 
 WORKDIR /tmp
-USER nobody
+
+RUN adduser -D dockuser
+
+USER dockuser
 
 ENTRYPOINT ["/usr/local/bin/fetch_and_run.sh"]
