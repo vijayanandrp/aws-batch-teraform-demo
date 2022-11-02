@@ -11,7 +11,7 @@ RUN chmod +x /usr/local/bin/fetch_and_run.sh
 WORKDIR /tmp
 
 RUN adduser -D dockuser
-
 USER dockuser
+
 
 ENTRYPOINT ["/usr/local/bin/fetch_and_run.sh"]
