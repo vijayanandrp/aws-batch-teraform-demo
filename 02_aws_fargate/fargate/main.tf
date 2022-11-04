@@ -8,7 +8,7 @@ locals {
   owner = "etl"
   vpc_id = "vpc-02075c56872868448"
   subnet_ids = ["subnet-033214d4f26fbf6cc", "subnet-0a7ccdf40ebb72b5e", "subnet-0f924d5623687fff8"]
-  image = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker-image:latest"
+  image = "917500451843.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker-image:latest"
 
   tags = {
     Owner        = local.owner
