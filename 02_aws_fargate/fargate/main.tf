@@ -6,8 +6,9 @@ locals {
   region = "us-east-1"
   name   = "enc-dec-${replace(basename(path.cwd), "_", "-")}"
   owner = "etl"
-  vpc_id = "vpc-0a1c11083c4812965"
-  subnet_ids = ["subnet-018f6b67507a505fb", "subnet-00af991b775e92eb8", "subnet-0761f4ba2929ac42d"]
+  vpc_id = "vpc-02075c56872868448"
+  subnet_ids = ["subnet-033214d4f26fbf6cc", "subnet-0a7ccdf40ebb72b5e", "subnet-0f924d5623687fff8"]
+  image = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker-image:latest"
 
   tags = {
     Owner        = local.owner
@@ -133,7 +134,7 @@ module "batch" {
         
         # image   = "public.ecr.aws/runecast/busybox:1.33.1"
         ## Below ECR Image URL should be updated.
-        image    = "697350684613.dkr.ecr.us-east-1.amazonaws.com/encrypt-decrypt-s3-docker-image:latest"
+        image    = local.image
         
         fargatePlatformConfiguration = {
           platformVersion = "LATEST"
