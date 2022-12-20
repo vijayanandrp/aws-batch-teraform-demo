@@ -1,0 +1,334 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: ETL 2.0 batch resources stack
+Parameters:
+  pOwner:
+    Description: Owning Team
+    Type: String
+    Default: etl
+    AllowedValues:
+    - etl
+    - sec
+    - ttp
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: Miscellaneous
+        Parameters: 
+          - pOwner
+          - pEtlAmi
+    ParameterLabels: 
+      pOwner: 
+        default: "Owning Team"
+Mappings:
+  TargetAccountMap:
+    '506457898372': 
+      Name: Infosec 
+      Env: is  
+      VpcCidr: 10.5.0.0/16    
+
+    '727212345168':
+      Name: Prod
+      NameLowerCase: prod
+      Env: pd
+      AppSubnet1C: subnet-00a87b26dfc6a872a
+      AppSubnet1D: subnet-0f67229b941639ab2
+      DataSubnet1C: subnet-0dbe0f539130237fc
+      DataSubnet1D: subnet-0af34512ddd6c6b3b
+      BatchServiceRole: arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole
+      VpcCidr: 10.1.0.0/16
+
+    '917500451843':
+      Name: Test
+      NameLowerCase: test
+      Env: ts
+      AppSubnet1C: subnet-033214d4f26fbf6cc
+      AppSubnet1D: subnet-0f924d5623687fff8
+      DataSubnet1C: subnet-0b49acce78cf57505
+      DataSubnet1D: subnet-0efcf45df9f524ac4
+      BatchServiceRole: arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole
+      VpcCidr: 10.2.0.0/16
+
+    '697350684613':
+      Name: Dev
+      NameLowerCase: dev
+      Env: dv
+      AppSubnet1C: subnet-00af991b775e92eb8
+      AppSubnet1D: subnet-018f6b67507a505fb
+      DataSubnet1C: subnet-0e1517e3186c22b27
+      DataSubnet1D: subnet-0a286cca9ac3e403a
+      BatchServiceRole: arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole
+      VpcCidr: 10.3.0.0/16
+
+    '799092822660':     
+      Name: SSC     
+      Env: ss 
+
+    '541890059215': 
+      Name: Transit 
+      Env: tx 
+
+  mTargetEnvMap:
+    prod:
+      acct: '727212345168'
+      Name: prod
+      Env: pd      
+    test:
+      acct: '917500451843'
+      Name: test
+      Env: ts
+    dev:
+      acct: '697350684613'
+      Name: dev
+      Env: dv
+    ssc:
+      acct: '799092822660'  
+      Name: ssc     
+      Env: ss
+    transit: 
+      acct: '541890059215'
+      Name: transit 
+      Env: tx   
+    infosec:
+      acct: '506457898372'  
+      Name: infosec     
+      Env: is
+      VpcCidr: 10.5.0.0/16 
+Resources:
+  rJobDefinition:
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      Type: container
+      JobDefinitionName: nvidia-smi
+      ContainerProperties:
+        MountPoints:
+          - ReadOnly: false
+            SourceVolume: nvidia
+            ContainerPath: /usr/local/nvidia
+        Volumes:
+          - Host:
+              SourcePath: /var/lib/nvidia-docker/volumes/nvidia_driver/latest
+            Name: nvidia
+        Command:
+          - nvidia-smi
+        Privileged: true
+        JobRoleArn: String
+        ReadonlyRootFilesystem: true
+        ResourceRequirements:
+          - Type: VCPU
+            Value: '1'
+          - Type: MEMORY
+            Value: '1024'
+        Image: public.ecr.aws/runecast/busybox:1.33.1
+  rLowPriorityJobQueue:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      ComputeEnvironmentOrder:
+        - Order: 1
+          ComputeEnvironment: !Ref rOnDemandBatchComputeEnvironment #C4OnDemand
+        - Order: 2
+          ComputeEnvironment: !Ref rSpotBatchComputeEnvironment
+      State: ENABLED
+      Priority: 1
+      JobQueueName: LowPriorityEc2
+    DependsOn: 
+      - rOnDemandBatchComputeEnvironment
+      - rSpotBatchComputeEnvironment
+  rHighPriorityJobQueue:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      ComputeEnvironmentOrder:
+        - Order: 1
+          ComputeEnvironment: !Ref rOnDemandBatchComputeEnvironment #C4OnDemand
+        - Order: 2
+          ComputeEnvironment: !Ref rSpotBatchComputeEnvironment #M4Spot
+      State: ENABLED
+      Priority: 99
+      # fair_share_policy = {
+      #   compute_reservation = 1
+      #   share_decay_seconds = 3600
+
+      #   share_distribution = [{
+      #     share_identifier = "A1*"
+      #     weight_factor    = 0.1
+      #     }, {
+      #     share_identifier = "A2"
+      #     weight_factor    = 0.2
+      #   }]
+      # }
+      JobQueueName: HighPriorityEc2
+    DependsOn: 
+      - rOnDemandBatchComputeEnvironment
+      - rSpotBatchComputeEnvironment
+  rOnDemandBatchComputeEnvironment:
+    Type: AWS::Batch::ComputeEnvironment
+    Properties:
+      Type: MANAGED
+      State: ENABLED
+      ServiceRole: !Ref rBatchComputeInstanceRole #!FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', BatchServiceRole] # #
+      ComputeEnvironmentName: BatchOnDemand
+      ComputeResources:
+        #MinvCpus: 4
+        MaxvCpus: 16        
+        SecurityGroupIds:
+          - !Ref rBatchComputeSecurityGroup
+        Type: FARGATE
+        Subnets:
+          - !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', DataSubnet1C]
+          - !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', DataSubnet1D]
+        #ImageId: !Ref pEtlAmi
+        #InstanceRole: !Ref rBatchComputeInstanceRole # Or we could reference it in a parameter if its elsewhere
+        #InstanceTypes:
+        #  - m5.large
+        #  - r5.large
+      #Tags: 
+      #  - Key: Name
+      #    Value:
+      #      !Sub
+      #      - ${env}-etl-batch-ondemand       
+      #      - {
+      #        env: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', Env]
+      #        }     
+      #  - Key: Environment
+      #    Value: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', NameLowerCase]
+      #  - Key: Purpose
+      #    Value: etl2
+      #  - Key: Owner
+      #    Value: !Ref pOwner
+    DependsOn:
+      - rBatchComputeInstanceRole
+  rSpotBatchComputeEnvironment:
+    Type: AWS::Batch::ComputeEnvironment
+    Properties:
+      Type: MANAGED
+      State: ENABLED
+      ServiceRole: !Ref rBatchComputeInstanceRole #!Ref !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', BatchServiceRole] #
+      ComputeEnvironmentName: BatchSpot
+      ComputeResources:
+        #MinvCpus: 4
+        MaxvCpus: 16        
+        SecurityGroupIds:
+          - !Ref rBatchComputeSecurityGroup
+        Type: FARGATE
+        Subnets:
+          - !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', DataSubnet1C]
+          - !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', DataSubnet1D]
+        #ImageId: !Ref pEtlAmi
+        #InstanceRole: !Ref rBatchComputeInstanceRole # Or we could define a role in this stack and reference it
+        #InstanceTypes:
+        #  - m5.large
+        #  - r5.large
+      #Tags: 
+      #  - Key: Name
+      #    Value:
+      #      !Sub
+      #      - ${env}-etl-batch-spot       
+      #      - {
+      #        env: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', Env]
+      #        }     
+      #  - Key: Environment
+      #    Value: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', NameLowerCase]
+      #  - Key: Purpose
+      #    Value: etl2
+      #  - Key: Owner
+      #    Value: !Ref pOwner
+    DependsOn:
+      - rBatchComputeInstanceRole
+  rBatchComputeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group to allow inbound access to the batch compute environment instances
+      VpcId: 
+        Fn::ImportValue:
+          Fn::Join:
+            - ''
+            - - !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', Name]
+              - Networks-
+              - !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', Name]
+              - VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 1234
+        ToPort: 1234
+        CidrIp: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', VpcCidr]
+      Tags:
+      - Key: Name
+        Value:
+          !Sub
+          - ${env}tp10sg-etl-batch-compute       
+          - {
+            env: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', Env]
+            }
+      - Key: Environment
+        Value: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', NameLowerCase]
+      - Key: Purpose
+        Value: etl2
+      - Key: Owner
+        Value: !Ref pOwner
+  rBatchComputeInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:  
+        !Join 
+          - '' 
+          - - !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', Name] 
+            - EtlBatchCompute 
+      AssumeRolePolicyDocument: 
+        Version: 2012-10-17 
+        Statement: 
+          - Effect: Allow 
+            Principal:  
+              Service:  
+                - ec2.amazonaws.com 
+                #- batch.amazonaws.com
+            Action:  
+              - sts:AssumeRole 
+      Path: /
+      Policies:
+        - PolicyName: S3PolicyObject
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Effect: Allow
+              Action:
+                - s3:Get*
+                - s3:List*
+                - s3:Put*
+                - s3:Delete*
+              Resource: 
+                !Sub
+                  - ${s3Arn}${env}tps3-etl-bucketname
+                  - {
+                    s3Arn: 'arn:aws:s3:::',
+                    env: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', Env]
+                    }
+            - Effect: Allow
+              Action:
+                - s3:Get*
+                - s3:List*
+                - s3:Put*
+                - s3:Delete*
+              Resource: 
+                !Sub
+                  - ${s3Arn}${env}tps3-etl-bucketname/*
+                  - {
+                    s3Arn: 'arn:aws:s3:::',
+                    env: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', Env]
+                    }
+        - PolicyName: ParameterStoreAccessPolicyObject
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+            - Sid: AllowAccessToSSMParameters
+              Effect: Allow
+              Action:
+              - ssm:GetParameters
+              - ssm:GetParameter
+              Resource:
+              - !Sub arn:aws:ssm:us-east-1:${AWS::AccountId}:parameter/etl* 
+      ManagedPolicyArns:
+        - !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', BatchServiceRole]
+      #   - arn:aws:iam::aws:policy/AmazonECS_FullAccess 
+      #   - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      #   - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy

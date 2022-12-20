@@ -1,0 +1,333 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Resources:
+    BatchComputeEnvironmentFargate:
+        Type: "AWS::Batch::ComputeEnvironment"
+        Properties:
+            ComputeEnvironmentName: "fargate-s3encdemo"
+            Type: "MANAGED"
+            State: "ENABLED"
+            ServiceRole: !GetAtt IAMRole3.Arn
+            ComputeResources: 
+                Type: "FARGATE"
+                MaxvCpus: 8
+                Subnets: 
+                  - "subnet-0a7ccdf40ebb72b5e"
+                  - "subnet-0f924d5623687fff8"
+                  - "subnet-033214d4f26fbf6cc"
+                SecurityGroupIds: 
+                  - !Ref EC2SecurityGroup
+                  - !Ref EC2SecurityGroup2
+                Tags: {}
+
+    BatchComputeEnvironmentFargateSpot:
+        Type: "AWS::Batch::ComputeEnvironment"
+        Properties:
+            ComputeEnvironmentName: "fargate_spot-s3encdemo"
+            Type: "MANAGED"
+            State: "ENABLED"
+            ServiceRole: !GetAtt IAMRole3.Arn
+            ComputeResources: 
+                Type: "FARGATE_SPOT"
+                MaxvCpus: 8
+                Subnets: 
+                  - "subnet-0a7ccdf40ebb72b5e"
+                  - "subnet-0f924d5623687fff8"
+                  - "subnet-033214d4f26fbf6cc"
+                SecurityGroupIds: 
+                  - !Ref EC2SecurityGroup
+                  - !Ref EC2SecurityGroup2
+                Tags: {}
+
+    BatchJobQueueHighPriorityFargate:
+        Type: "AWS::Batch::JobQueue"
+        Properties:
+            ComputeEnvironmentOrder: 
+              - 
+                ComputeEnvironment: !Sub "arn:aws:batch:${AWS::Region}:${AWS::AccountId}:compute-environment/fargate-20221104233550573400000003"
+                Order: 0
+              - 
+                ComputeEnvironment: !Sub "arn:aws:batch:${AWS::Region}:${AWS::AccountId}:compute-environment/fargate_spot-20221104233550574900000004"
+                Order: 1
+            Priority: 99
+            State: "ENABLED"
+            JobQueueName: "HighPriorityFargate-s3encdemo"
+
+    BatchJobQueueLowPriorityFargate:
+        Type: "AWS::Batch::JobQueue"
+        Properties:
+            ComputeEnvironmentOrder: 
+              - 
+                ComputeEnvironment: !Sub "arn:aws:batch:${AWS::Region}:${AWS::AccountId}:compute-environment/fargate-20221104233550573400000003"
+                Order: 0
+              - 
+                ComputeEnvironment: !Sub "arn:aws:batch:${AWS::Region}:${AWS::AccountId}:compute-environment/fargate_spot-20221104233550574900000004"
+                Order: 1
+            Priority: 1
+            State: "ENABLED"
+            JobQueueName: "LowPriorityFargate-s3encdemo"
+
+    BatchSchedulingPolicyHighPriorityFargate:
+        Type: "AWS::Batch::SchedulingPolicy"
+        Properties:
+            Name: "HighPriorityFargate-s3encdemo"
+            FairsharePolicy: 
+                ComputeReservation: 1
+                ShareDecaySeconds: 3600
+                ShareDistribution: 
+                  - 
+                    ShareIdentifier: "A2"
+                    WeightFactor: 0.2
+                  - 
+                    ShareIdentifier: "A1*"
+                    WeightFactor: 0.1
+
+    BatchSchedulingPolicyLowPriorityFargate:
+        Type: "AWS::Batch::SchedulingPolicy"
+        Properties:
+            Name: "LowPriorityFargate-s3encdemo"
+            FairsharePolicy: 
+                ComputeReservation: 0
+                ShareDecaySeconds: 0
+
+    BatchJobDefinition:
+        Type: "AWS::Batch::JobDefinition"
+        Properties:
+            JobDefinitionName: "s3encdemo"
+            Type: "container"
+            Parameters: {}
+            RetryStrategy: 
+                Attempts: 3
+                EvaluateOnExit: 
+                  - 
+                    Action: "exit"
+                    OnExitCode: "0"
+                  - 
+                    Action: "retry"
+                    OnExitCode: "1"
+            Timeout: 
+                AttemptDurationSeconds: 60
+            ContainerProperties: 
+                MountPoints: 
+                  - 
+                    ReadOnly: false
+                    SourceVolume: "efs"
+                    ContainerPath: "/mnt/efs"
+                Volumes: 
+                  - 
+                    Name: "efs"
+                Command: 
+                  - "ls"
+                  - "-la;"
+                JobRoleArn: !GetAtt IAMRole2.Arn
+                Image: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/encrypt-decrypt-s3-docker-image:latest"
+                ExecutionRoleArn: !GetAtt IAMRole2.Arn
+                LogConfiguration: 
+                    LogDriver: "awslogs"
+                    Options: 
+                        awslogs-group: "/aws/batch/s3encdemo"
+                        awslogs-region: !Ref AWS::Region
+                        awslogs-stream-prefix: "s3encdemo"
+
+    EFSFileSystem:
+        Type: "AWS::EFS::FileSystem"
+        Properties:
+            PerformanceMode: "generalPurpose"
+            Encrypted: true
+            KmsKeyId: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/cedca054-8d47-46b4-80bc-913da7ab7446"
+            ThroughputMode: "bursting"
+            FileSystemTags: 
+              - 
+                Key: "Name"
+                Value: "s3encdemo-efs"
+              - 
+                Key: "Owner"
+                Value: "etl"
+              - 
+                Key: "Purpose"
+                Value: "etl"
+
+    EFSAccessPoint:
+        Type: "AWS::EFS::AccessPoint"
+        Properties:
+            FileSystemId: !Ref EFSFileSystem
+            RootDirectory: 
+                Path: "/"
+
+    IAMRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/batch/"
+            RoleName: "s3encdemo-ecs-instance-new-20221104232638305900000001"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"ECSAssumeRole\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns: 
+              - "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
+            Description: "IAM instance role/profile for AWS Batch ECS instance(s)"
+            Tags: 
+              - 
+                Key: "ModuleCreatedRole"
+                Value: "Yes"
+              - 
+                Key: "Owner"
+                Value: "etl"
+              - 
+                Key: "Purpose"
+                Value: "etl"
+
+    IAMRole2:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/"
+            RoleName: "s3encdemo-ecs-task-exec"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ecs-tasks.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns: 
+              - "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+              - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+
+    IAMRole3:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/batch/"
+            RoleName: "s3encdemo-batch-new-20221104232638331400000003"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"ECSAssumeRole\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"batch.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns: 
+              - "arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole"
+            Description: "IAM service role for AWS Batch"
+            Tags: 
+              - 
+                Key: "Owner"
+                Value: "etl"
+              - 
+                Key: "Purpose"
+                Value: "etl"
+              - 
+                Key: "ModuleCreatedRole"
+                Value: "Yes"
+
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/batch/"
+            RoleName: "s3encdemo-spot-new-20221104232638321300000002"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"ECSAssumeRole\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"spotfleet.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns: 
+              - "arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole"
+            Description: "IAM spot fleet role for AWS Batch"
+            Tags: 
+              - 
+                Key: "Owner"
+                Value: "etl"
+              - 
+                Key: "ModuleCreatedRole"
+                Value: "Yes"
+              - 
+                Key: "Purpose"
+                Value: "etl"
+
+    EC2SecurityGroup:
+        Type: "AWS::EC2::SecurityGroup"
+        Properties:
+            GroupDescription: "Security group for EFS"
+            GroupName: "s3encdemo-efs-sg-20221104233548182600000001"
+            Tags: 
+              - 
+                Key: "Name"
+                Value: "s3encdemo-efs-sg"
+              - 
+                Key: "Owner"
+                Value: "etl"
+              - 
+                Key: "Purpose"
+                Value: "etl"
+            VpcId: !Ref EC2VPC
+            SecurityGroupIngress: 
+              - 
+                SourceSecurityGroupId: "sg-045214e2d0ee014f0"
+                SourceSecurityGroupOwnerId: !Ref AWS::AccountId
+                Description: "Container to VPC endpoint service"
+                FromPort: 443
+                IpProtocol: "tcp"
+                ToPort: 443
+              - 
+                SourceSecurityGroupId: !Ref EC2SecurityGroup2
+                SourceSecurityGroupOwnerId: !Ref AWS::AccountId
+                Description: "https from service one"
+                FromPort: 443
+                IpProtocol: "tcp"
+                ToPort: 443
+              - 
+                SourceSecurityGroupId: "sg-045214e2d0ee014f0"
+                SourceSecurityGroupOwnerId: !Ref AWS::AccountId
+                Description: "EFS (NFS)"
+                FromPort: 2049
+                IpProtocol: "tcp"
+                ToPort: 2049
+              - 
+                SourceSecurityGroupId: !Ref EC2SecurityGroup2
+                SourceSecurityGroupOwnerId: !Ref AWS::AccountId
+                Description: "nfs from service one"
+                FromPort: 2049
+                IpProtocol: "tcp"
+                ToPort: 2049
+            SecurityGroupEgress: 
+              - 
+                CidrIp: "0.0.0.0/0"
+                Description: "All protocols"
+                IpProtocol: "-1"
+              - 
+                CidrIpv6: "::/0"
+                Description: "All protocols"
+                IpProtocol: "-1"
+
+    EC2SecurityGroup2:
+        Type: "AWS::EC2::SecurityGroup"
+        Properties:
+            GroupDescription: "Security group for VPC endpoints"
+            GroupName: "s3encdemo-vpc-endpoint-20221104233548184900000002"
+            Tags: 
+              - 
+                Key: "Owner"
+                Value: "etl"
+              - 
+                Key: "Purpose"
+                Value: "etl"
+              - 
+                Key: "Name"
+                Value: "s3encdemo-vpc-endpoint"
+            VpcId: !Ref EC2VPC
+            SecurityGroupEgress: 
+              - 
+                CidrIp: "0.0.0.0/0"
+                Description: "egress ports"
+                FromPort: 0
+                IpProtocol: "tcp"
+                ToPort: 65535
+
+    IAMInstanceProfile:
+        Type: "AWS::IAM::InstanceProfile"
+        Properties:
+            Path: "/batch/"
+            InstanceProfileName: "s3encdemo-ecs-instance-new-20221104232638972900000006"
+            Roles: 
+              - !Sub "batch/${IAMRole}"
+
+    EC2SecurityGroup4:
+        Type: "AWS::EC2::SecurityGroup"
+        Properties:
+            GroupDescription: "FileSystem Security Group"
+            GroupName: "enc-dec-ecs-fargate-sg"
+            VpcId: !Ref EC2VPC
+            SecurityGroupEgress: 
+              - 
+                CidrIp: "0.0.0.0/0"
+                IpProtocol: "-1"
+
+   
+    LogsLogGroup:
+        Type: "AWS::Logs::LogGroup"
+        Properties:
+            LogGroupName: "/aws/batch/s3encdemo"
+            RetentionInDays: 30

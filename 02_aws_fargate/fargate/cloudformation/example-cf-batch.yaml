@@ -1,0 +1,309 @@
+AWSTemplateFormatVersion: 2010-09-09
+Metadata: {}
+Resources:
+  TaskDefinition:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      ContainerDefinitions:
+        - Environment:
+            - Name: ID_AGENT
+              Value: !Ref AgentID
+            - Name: ID_ORGANIZATION
+              Value: !Ref OrganizationID
+            - Name: PLATFORM_KEY_NAME
+              Value: !Ref PlatformKeyName
+            - Name: PLATFORM_KEY_PROVIDER
+              Value: aws-secrets-manager
+            - Name: PLATFORM_WEBSOCKET_ENDPOINT
+              Value: !Ref PlatformWebsocketEndpoint
+            - Name: SECRET_PROVIDERS
+              Value: 'aws-secrets-manager:1'
+          Essential: true
+          Image: !Ref ImageUrl
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref CloudwatchLogGroup
+              awslogs-region: !Ref Region
+              awslogs-stream-prefix: /ecs
+          Name: !Ref ServiceName
+          PortMappings:
+            - ContainerPort: 8080
+              Protocol: tcp
+          Privileged: false
+      Cpu: 4096
+      ExecutionRoleArn: !GetAtt 
+        - TaskExecutionRole
+        - Arn
+      Family: !Ref TaskDefinitionName
+      Memory: 8192
+      NetworkMode: awsvpc
+      TaskRoleArn: !GetAtt 
+        - TaskRole
+        - Arn
+    Metadata: {}
+    DependsOn:
+      - TaskRole
+      - TaskExecutionRole
+      - CloudwatchLogGroup
+  ECSService:
+    Type: 'AWS::ECS::Service'
+    Properties:
+      Cluster: !Ref FargateCluster
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: !Ref AssignPublicIp
+          SecurityGroups: !Ref SecurityGroups
+          Subnets: !Ref SubnetIDs
+      TaskDefinition: !Ref TaskDefinition
+    Metadata: {}
+    DependsOn:
+      - FargateCluster
+      - TaskDefinition
+      - CloudwatchLogGroup
+  FargateCluster:
+    Type: 'AWS::ECS::Cluster'
+    Properties:
+      CapacityProviders:
+        - FARGATE
+      ClusterName: !Ref ClusterName
+    Metadata: {}
+  CloudwatchLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      RetentionInDays: 30
+    Metadata: {}
+  StagingBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref StagingBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: AgentAccessPolicy
+            Effect: Allow
+            Principal:
+              AWS: !GetAtt 
+                - TaskRole
+                - Arn
+            Action:
+              - 's3:GetObject'
+              - 's3:GetObjectVersion'
+              - 's3:ListBucket'
+              - 's3:PutObject'
+              - 's3:GetBucketLocation'
+            Resource:
+              - !Join 
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref StagingBucket
+              - !Join 
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref StagingBucket
+                  - /*
+          - Sid: RootAccessPolicy
+            Effect: Allow
+            Principal:
+              AWS: !Join 
+                - ''
+                - - 'arn:aws:iam::'
+                  - !Ref 'AWS::AccountId'
+                  - ':root'
+            Action:
+              - 's3:*'
+            Resource:
+              - !Join 
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref StagingBucket
+              - !Join 
+                - ''
+                - - 'arn:aws:s3:::'
+                  - !Ref StagingBucket
+                  - /*
+  TaskRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Effect: Allow
+            Sid: ''
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
+      RoleName: !Ref RoleName
+  TaskExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: 'sts:AssumeRole'
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Effect: Allow
+            Sid: ''
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy'
+      RoleName: !Ref ExecutionRoleName
+  StagingBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Ref BucketName
+  TaskExecutionRolePolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 'ecr-public:GetAuthorizationToken'
+              - 'sts:GetServiceBearerToken'
+              - 'ecr:GetAuthorizationToken'
+              - 'ecr:BatchCheckLayerAvailability'
+              - 'ecr:GetDownloadUrlForLayer'
+              - 'ecr:BatchGetImage'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Effect: Allow
+            Resource: '*'
+            Sid: ECRAndCloudwatch
+      PolicyName: !Join 
+        - '-'
+        - - !Ref ExecutionRoleName
+          - policy
+      Roles:
+        - !Ref TaskExecutionRole
+  TaskRolePolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 's3:ListBucket'
+              - 's3:GetBucketLocation'
+            Effect: Allow
+            Resource: !GetAtt 
+              - StagingBucket
+              - Arn
+            Sid: StagingBucketList
+          - Action:
+              - 's3:PutObject'
+              - 's3:PutObjectAcl'
+              - 's3:GetObject'
+              - 's3:GetObjectAcl'
+              - 's3:DeleteObject'
+            Effect: Allow
+            Resource: !Join 
+              - /
+              - - !GetAtt 
+                  - StagingBucket
+                  - Arn
+                - '*'
+            Sid: StagingBucketPerms
+          - Action:
+              - 'ecs:ListTasks'
+              - 'ecs:ListServices'
+              - 'ec2:DescribeInstances'
+              - 'ecs:DescribeContainerInstances'
+              - 'ecs:DescribeServices'
+              - 'ecs:DescribeTasks'
+              - 'ecs:DescribeTaskDefinition'
+            Effect: Allow
+            Resource: '*'
+            Sid: CloudwatchAgentPerms
+          - Action: 'secretsmanager:GetSecretValue'
+            Effect: Allow
+            Resource: !Ref SecretARNs
+            Sid: SecretsManagerPerms
+      PolicyName: !Join 
+        - '-'
+        - - !Ref RoleName
+          - policy
+      Roles:
+        - !Ref TaskRole
+Parameters:
+  AgentID:
+    Type: String
+    Description: >-
+      The unique UUID for your Dataloading agent. See documentation for more
+      info.
+  AssignPublicIp:
+    Type: String
+    Description: >-
+      Whether to assign a public IP to this container (required for NAT in a
+      public subnet)
+    Default: DISABLED
+    AllowedValues:
+      - ENABLED
+      - DISABLED
+  BucketName:
+    Type: String
+    Description: The name for the S3 staging bucket.
+    Default: matillion-cdc-staging-bucket
+  PlatformWebsocketEndpoint:
+    Type: String
+    Description: The value for PLATFORM_WEBSOCKET_ENDPOINT
+  ClusterName:
+    Type: String
+    Description: Name for the ECS Fargate cluster to be created for hosting your agent(s).
+    Default: matillion-cdc-agent
+  ExecutionRoleName:
+    Description: The role name for the role ECS will use to initialise the task.
+    Type: String
+    Default: matillion-cdc-agent-task-execution-role
+  ImageUrl:
+    Type: String
+    Description: The URL of the repository you are pulling the CDC agent image from.
+    Default: 'public.ecr.aws/matillion/cdc-agent:2'
+  LogGroupName:
+    Type: String
+    Default: matillion-cdc-agent
+    Description: Name for the Cloudwatch Log Group for agent logging.
+  OrganizationID:
+    Description: >-
+      The unique UUID for your Dataloading organization. See documentation for
+      more info.
+    Type: String
+  PlatformKeyName:
+    Description: >-
+      The name of the AWS Secret Manager secret in which your generated private
+      key is stored.
+    Type: String
+  Region:
+    Description: The region you wish these resources to be created in.
+    Type: String
+  RoleName:
+    Description: The role name for the role the task will run as.
+    Type: String
+    Default: matillion-cdc-agent-task-role
+  SecretARNs:
+    Description: >-
+      A list of secret ARNs the task role needs access to - specifically the
+      Private Key and DB Password secrets
+    Type: CommaDelimitedList
+    Default: '*'
+  SecurityGroups:
+    Description: >-
+      A list of the security groups you wish to apply to the tasks in this
+      service
+    Type: 'List<AWS::EC2::SecurityGroup::Id>'
+  ServiceName:
+    Description: The name of the ECS Service you want these task(s) to run under.
+    Type: String
+    Default: matillion-cdc-agent
+  SubnetIDs:
+    Description: A list of subnets you wish these tasks to be able to run in.
+    Type: 'List<AWS::EC2::Subnet::Id>'
+  TaskDefinitionName:
+    Description: Name for the task definition for agent task(s).
+    Type: String
+    Default: matillion-cdc-agent
