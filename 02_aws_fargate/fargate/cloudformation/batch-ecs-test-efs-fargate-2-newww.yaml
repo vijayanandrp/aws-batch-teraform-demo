@@ -136,11 +136,15 @@ Resources:
           IpProtocol: "-1"
       SecurityGroupIngress:
         - 
+          SourceSecurityGroupId: !Ref EC2SecurityGroup
+          SourceSecurityGroupOwnerId: !Ref AWS::AccountId
           Description: "https from service one"
           FromPort: 443
           IpProtocol: "tcp"
           ToPort: 443
         - 
+          SourceSecurityGroupId: !Ref EC2SecurityGroup
+          SourceSecurityGroupOwnerId: !Ref AWS::AccountId
           Description: "nfs from service one"
           FromPort: 2049
           IpProtocol: "tcp"
