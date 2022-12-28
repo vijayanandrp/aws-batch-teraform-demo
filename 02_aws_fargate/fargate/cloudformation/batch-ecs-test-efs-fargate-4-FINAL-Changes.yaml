@@ -1,0 +1,547 @@
+  AWSTemplateFormatVersion: '2010-09-09'
+  Description: ETL 2.0 batch resources stack
+  Parameters:
+    pOwner:
+      Description: Owning Team
+      Type: String
+      Default: etl
+      AllowedValues:
+      - etl
+      - sec
+      - ttp
+    pAppName:
+      Description: AppName
+      Type: String
+      Default: s3encdemo01
+  Metadata: 
+    AWS::CloudFormation::Interface: 
+      ParameterGroups: 
+        - 
+          Label: 
+            default: Miscellaneous
+          Parameters: 
+            - pOwner
+            - pAppName
+      ParameterLabels: 
+        pOwner: 
+          default: "Owning Team"
+        pAppName:
+          default: "AppName"
+  Mappings:
+    TargetAccountMap:
+      '506457898372': 
+        Name: Infosec 
+        Env: is  
+        VpcCidr: 10.5.0.0/16    
+
+      '727212345168':
+        Name: Prod
+        NameLowerCase: prod
+        Env: pd
+        AppSubnet1C: subnet-00a87b26dfc6a872a
+        AppSubnet1D: subnet-0f67229b941639ab2
+        DataSubnet1C: subnet-0dbe0f539130237fc
+        DataSubnet1D: subnet-0af34512ddd6c6b3b
+        BatchServiceRole: arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole
+        VpcCidr: 10.1.0.0/16
+
+      '917500451843':
+        Name: Test
+        NameLowerCase: test
+        Env: ts
+        AppSubnet1C: subnet-033214d4f26fbf6cc
+        AppSubnet1D: subnet-0f924d5623687fff8
+        DataSubnet1C: subnet-0b49acce78cf57505
+        DataSubnet1D: subnet-0efcf45df9f524ac4
+        BatchServiceRole: arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole
+        VpcCidr: 10.2.0.0/16
+        VpcId: vpc-02075c56872868448
+
+      '697350684613':
+        Name: Dev
+        NameLowerCase: dev
+        Env: dv
+        AppSubnet1C: subnet-00af991b775e92eb8
+        AppSubnet1D: subnet-018f6b67507a505fb
+        DataSubnet1C: subnet-0e1517e3186c22b27
+        DataSubnet1D: subnet-0a286cca9ac3e403a
+        BatchServiceRole: arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole
+        VpcCidr: 10.3.0.0/16
+        VpcId: vpc-0a1c11083c4812965
+
+      '799092822660':     
+        Name: SSC     
+        Env: ss 
+
+      '541890059215': 
+        Name: Transit 
+        Env: tx 
+
+    mTargetEnvMap:
+      prod:
+        acct: '727212345168'
+        Name: prod
+        Env: pd      
+      test:
+        acct: '917500451843'
+        Name: test
+        Env: ts
+      dev:
+        acct: '697350684613'
+        Name: dev
+        Env: dv
+      ssc:
+        acct: '799092822660'  
+        Name: ssc     
+        Env: ss
+      transit: 
+        acct: '541890059215'
+        Name: transit 
+        Env: tx   
+      infosec:
+        acct: '506457898372'  
+        Name: infosec     
+        Env: is
+        VpcCidr: 10.5.0.0/16 
+
+  Resources: 
+    EC2SecurityGroup:
+      Type: "AWS::EC2::SecurityGroup"
+      Properties:
+          GroupDescription: "Security group for VPC endpoints"
+          GroupName: !Sub "${pAppName}-vpc-endpoint"
+          VpcId: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', VpcId]
+          SecurityGroupEgress: 
+            - 
+              CidrIp: "0.0.0.0/0"
+              Description: "egress ports"
+              FromPort: 0
+              IpProtocol: "tcp"
+              ToPort: 65535
+          Tags: 
+            - 
+              Key: Environment
+              Value: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', NameLowerCase]
+            - 
+              Key: Purpose
+              Value: etl
+            - 
+              Key: "Owner"
+              Value: !Sub "${pOwner}"
+
+    EFSSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupName:  !Sub "${pAppName}-sg"
+        GroupDescription: FileSystem Security Group
+        VpcId: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', VpcId]
+        SecurityGroupIngress:
+          - 
+            SourceSecurityGroupId: !Ref EC2SecurityGroup
+            Description: "https from service one"
+            FromPort: 443
+            IpProtocol: "tcp"
+            ToPort: 443
+          - 
+            SourceSecurityGroupId: !Ref EC2SecurityGroup
+            Description: "nfs from service one"
+            FromPort: 2049
+            IpProtocol: "tcp"
+            ToPort: 2049
+        Tags: 
+          - 
+            Key: Environment
+            Value: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', NameLowerCase]
+          - 
+            Key: Purpose
+            Value: etl
+          - 
+            Key: "Owner"
+            Value: !Sub "${pOwner}"
+
+    BatchRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        Path: "/batch/"
+        RoleName: !Sub "${pAppName}-batch-role"
+        AssumeRolePolicyDocument: 
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Sid: 'ECSAssumeRole'
+              Principal:
+                Service:
+                  - 'batch.amazonaws.com'
+              Action: 'sts:AssumeRole'
+        MaxSessionDuration: 3600
+        Policies:
+          - PolicyName: !Sub "${pAppName}-AWSBatchServiceRole"
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Action:
+                    - "ecs:TagResource"
+                  Resource:
+                    - 'arn:aws:ecs:*:*:task/*_Batch_*'
+                  Effect: Allow
+                - Action:
+                    - "ec2:DescribeAccountAttributes"
+                    - "ec2:DescribeInstances"
+                    - "ec2:DescribeInstanceStatus"
+                    - "ec2:DescribeInstanceAttribute"
+                    - "ec2:DescribeSubnets"
+                    - "ec2:DescribeSecurityGroups"
+                    - "ec2:DescribeKeyPairs"
+                    - "ec2:DescribeImages"
+                    - "ec2:DescribeImageAttribute"
+                    - "ec2:DescribeSpotInstanceRequests"
+                    - "ec2:DescribeSpotFleetInstances"
+                    - "ec2:DescribeSpotFleetRequests"
+                    - "ec2:DescribeSpotPriceHistory"
+                    - "ec2:DescribeVpcClassicLink"
+                    - "ec2:DescribeLaunchTemplateVersions"
+                    - "ec2:CreateLaunchTemplate"
+                    - "ec2:DeleteLaunchTemplate"
+                    - "ec2:RequestSpotFleet"
+                    - "ec2:CancelSpotFleetRequests"
+                    - "ec2:ModifySpotFleetRequest"
+                    - "ec2:TerminateInstances"
+                    - "ec2:RunInstances"
+                    - "autoscaling:DescribeAccountLimits"
+                    - "autoscaling:DescribeAutoScalingGroups"
+                    - "autoscaling:DescribeLaunchConfigurations"
+                    - "autoscaling:DescribeAutoScalingInstances"
+                    - "autoscaling:CreateLaunchConfiguration"
+                    - "autoscaling:CreateAutoScalingGroup"
+                    - "autoscaling:UpdateAutoScalingGroup"
+                    - "autoscaling:SetDesiredCapacity"
+                    - "autoscaling:DeleteLaunchConfiguration"
+                    - "autoscaling:DeleteAutoScalingGroup"
+                    - "autoscaling:CreateOrUpdateTags"
+                    - "autoscaling:SuspendProcesses"
+                    - "autoscaling:PutNotificationConfiguration"
+                    - "autoscaling:TerminateInstanceInAutoScalingGroup"
+                    - "ecs:DescribeClusters"
+                    - "ecs:DescribeContainerInstances"
+                    - "ecs:DescribeTaskDefinition"
+                    - "ecs:DescribeTasks"
+                    - "ecs:ListAccountSettings"
+                    - "ecs:ListClusters"
+                    - "ecs:ListContainerInstances"
+                    - "ecs:ListTaskDefinitionFamilies"
+                    - "ecs:ListTaskDefinitions"
+                    - "ecs:ListTasks"
+                    - "ecs:CreateCluster"
+                    - "ecs:DeleteCluster"
+                    - "ecs:RegisterTaskDefinition"
+                    - "ecs:DeregisterTaskDefinition"
+                    - "ecs:RunTask"
+                    - "ecs:StartTask"
+                    - "ecs:StopTask"
+                    - "ecs:UpdateContainerAgent"
+                    - "ecs:DeregisterContainerInstance"
+                    - "logs:CreateLogGroup"
+                    - "logs:CreateLogStream"
+                    - "logs:PutLogEvents"
+                    - "logs:DescribeLogGroups"
+                    - "iam:GetInstanceProfile"
+                    - "iam:GetRole"
+                  Resource:
+                    - '*'
+                  Effect: Allow
+                - Action:
+                    - "iam:PassRole"
+                  Resource:
+                    - '*'
+                  Effect: Allow
+                  Condition:
+                    StringEquals:
+                      "iam:PassedToService":
+                        - "ec2.amazonaws.com"
+                        - "ec2.amazonaws.com.cn"
+                        - "ecs-tasks.amazonaws.com"
+                - Action:
+                    - "iam:CreateServiceLinkedRole"
+                  Resource:
+                    - '*'
+                  Effect: Allow
+                  Condition:
+                    StringEquals:
+                      "iam:AWSServiceName":
+                        - "spot.amazonaws.com"
+                        - "spotfleet.amazonaws.com"
+                        - "autoscaling.amazonaws.com"
+                        - "ecs.amazonaws.com"
+                - Action:
+                    - "ec2:CreateTags"
+                  Resource:
+                    - '*'
+                  Effect: Allow
+                  Condition:
+                    StringEquals:
+                      "ec2:CreateAction":
+                        - "RunInstances"
+        Description: "IAM service role for AWS Batch"
+        Tags: 
+          - 
+            Key: Environment
+            Value: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', NameLowerCase]
+          - 
+            Key: Purpose
+            Value: etl
+          - 
+            Key: "Owner"
+            Value: !Sub "${pOwner}"
+
+    TaskRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        Path: "/"
+        RoleName: !Sub "${pAppName}-task-role"
+        AssumeRolePolicyDocument: 
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - ecs-tasks.amazonaws.com
+              Action: 'sts:AssumeRole'
+        MaxSessionDuration: 3600
+        Policies:
+          - PolicyName: !Sub "${pAppName}-AmazonECSTaskExecutionRolePolicy"
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Action:
+                    - 's3:*'
+                    - 's3-object-lambda:*'
+                  Resource:
+                    - '*'
+                  Effect: Allow
+                - Action:
+                    - "ecr:GetAuthorizationToken"
+                    - "ecr:BatchCheckLayerAvailability"
+                    - "ecr:GetDownloadUrlForLayer"
+                    - "ecr:BatchGetImage"
+                    - "logs:CreateLogStream"
+                    - "logs:PutLogEvents"
+                  Resource:
+                    - '*'
+                  Effect: Allow
+        Tags: 
+          - 
+            Key: Environment
+            Value: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', NameLowerCase]
+          - 
+            Key: Purpose
+            Value: etl
+          - 
+            Key: "Owner"
+            Value: !Sub "${pOwner}"
+
+    BatchComputeEnvironmentFargate:
+      Type: "AWS::Batch::ComputeEnvironment"
+      Properties:
+        ComputeEnvironmentName: !Sub "fargate-${pAppName}"
+        Type: "MANAGED"
+        State: "ENABLED"
+        ServiceRole: !GetAtt BatchRole.Arn
+        ComputeResources: 
+          Type: "FARGATE"
+          MaxvCpus: 8
+          Subnets: 
+            - !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', AppSubnet1C]
+            - !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', AppSubnet1D]
+          SecurityGroupIds: 
+            - !Ref EC2SecurityGroup
+            - !Ref EFSSecurityGroup
+
+    BatchComputeEnvironmentFargateSpot:
+      Type: "AWS::Batch::ComputeEnvironment"
+      Properties:
+        ComputeEnvironmentName: !Sub "fargate_spot-${pAppName}"
+        Type: "MANAGED"
+        State: "ENABLED"
+        ServiceRole: !GetAtt BatchRole.Arn
+        ComputeResources: 
+          Type: "FARGATE_SPOT"
+          MaxvCpus: 8
+          Subnets: 
+            - !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', AppSubnet1C]
+            - !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', AppSubnet1D]
+          SecurityGroupIds: 
+            - !Ref EC2SecurityGroup
+            - !Ref EFSSecurityGroup
+          Tags: {}
+    
+    BatchJobQueueHighPriorityFargate:
+      Type: "AWS::Batch::JobQueue"
+      Properties:
+        ComputeEnvironmentOrder: 
+          - 
+            ComputeEnvironment: !Ref BatchComputeEnvironmentFargate
+            Order: 0
+          - 
+            ComputeEnvironment: !Ref BatchComputeEnvironmentFargateSpot
+            Order: 1
+        Priority: 99
+        State: "ENABLED"
+        JobQueueName: !Sub "HighPriorityFargate-${pAppName}"
+        SchedulingPolicyArn: !Ref BatchSchedulingPolicyHighPriorityFargate
+      DependsOn : [BatchComputeEnvironmentFargate, BatchComputeEnvironmentFargateSpot]
+
+    BatchJobQueueLowPriorityFargate:
+      Type: "AWS::Batch::JobQueue"
+      Properties:
+        ComputeEnvironmentOrder: 
+          - 
+            ComputeEnvironment: !Ref BatchComputeEnvironmentFargate
+            Order: 0
+          - 
+            ComputeEnvironment: !Ref BatchComputeEnvironmentFargateSpot
+            Order: 1
+        Priority: 1
+        State: "ENABLED"
+        JobQueueName: !Sub "LowPriorityFargate-${pAppName}"
+        SchedulingPolicyArn: !Ref BatchSchedulingPolicyLowPriorityFargate
+      DependsOn : [BatchComputeEnvironmentFargate, BatchComputeEnvironmentFargateSpot]
+
+    BatchSchedulingPolicyHighPriorityFargate:
+      Type: "AWS::Batch::SchedulingPolicy"
+      Properties:
+        Name: !Sub "HighPriorityFargate-${pAppName}"
+        FairsharePolicy: 
+          ComputeReservation: 1
+          ShareDecaySeconds: 3600
+          ShareDistribution: 
+            - 
+              ShareIdentifier: "A2"
+              WeightFactor: 0.2
+            - 
+              ShareIdentifier: "A1*"
+              WeightFactor: 0.1
+
+    BatchSchedulingPolicyLowPriorityFargate:
+      Type: "AWS::Batch::SchedulingPolicy"
+      Properties:
+        Name: !Sub "LowPriorityFargate-${pAppName}"
+        FairsharePolicy: 
+          ComputeReservation: 0
+          ShareDecaySeconds: 0
+
+    BatchJobDefinition:
+      Type: "AWS::Batch::JobDefinition"
+      Properties:
+        JobDefinitionName: !Sub "${pAppName}"
+        PropagateTags: true
+        PlatformCapabilities: [ FARGATE ]
+        Type: "container"
+        Parameters: {}  
+        RetryStrategy: 
+          Attempts: 3
+          EvaluateOnExit: 
+            - 
+              Action: "exit"
+              OnExitCode: "0"
+            - 
+              Action: "retry"
+              OnExitCode: "1"
+        Timeout: 
+          AttemptDurationSeconds: 60
+        ContainerProperties: 
+          MountPoints: 
+            - 
+              ReadOnly: false
+              SourceVolume: "efs"
+              ContainerPath: "/mnt/efs"
+          Volumes: 
+            - 
+              Name: "efs"
+              EfsVolumeConfiguration:
+                FileSystemId: !Ref EFSFileSystemResource
+                TransitEncryption: ENABLED
+                TransitEncryptionPort: 2049
+          Command: 
+            - "ls"
+            - "-la;"
+          ResourceRequirements:
+            - Type: VCPU
+              Value: '4'
+            - Type: MEMORY
+              Value: '30720'
+          Image: !Sub "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/encrypt-decrypt-s3-docker-image:latest"
+          FargatePlatformConfiguration:
+            PlatformVersion: LATEST
+          ExecutionRoleArn: !GetAtt TaskRole.Arn
+          JobRoleArn: !GetAtt TaskRole.Arn
+             
+    EFSFileSystemResource:
+      Type: 'AWS::EFS::FileSystem'
+      Properties:
+        PerformanceMode:  "generalPurpose"
+        ThroughputMode: "bursting"
+        Encrypted: true
+        LifecyclePolicies:
+          - TransitionToIA: AFTER_7_DAYS
+        FileSystemTags:
+          - 
+            Key: Name
+            Value: !Sub "${pAppName}-efs"
+        FileSystemPolicy:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: "Allow"
+              Action:
+                - "elasticfilesystem:ClientMount"
+                - "elasticfilesystem:ClientRootAccess"
+                - "elasticfilesystem:ClientWrite"
+              Principal:
+                  AWS: '*'
+              Condition:
+                Bool:
+                  'aws:SecureTransport': 'true'
+        KmsKeyId: !GetAtt EFSKMSKey.Arn
+    
+    EFSKMSKey:
+      Type: AWS::KMS::Key
+      Properties:
+        KeyPolicy:
+          Version: 2012-10-17
+          Id: key-default-1
+          Statement:
+            - Sid: Allow administration of the key
+              Effect: Allow
+              Principal:
+                AWS: !Join 
+                  - ''
+                  - - 'arn:aws:iam::'
+                    - !Ref 'AWS::AccountId'
+                    - ':root'
+              Action:
+                - 'kms:*'
+              Resource: 
+                - '*'
+
+    EFSAccessPointResource:
+      Type: 'AWS::EFS::AccessPoint'
+      Properties:
+        FileSystemId: !Ref EFSFileSystemResource
+        RootDirectory: 
+            Path: !Sub "/${pAppName}"
+
+    EFSMountTargetResourceAppSubnet1C:
+      Type: AWS::EFS::MountTarget
+      Properties:
+        FileSystemId: !Ref EFSFileSystemResource
+        SubnetId: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', AppSubnet1C]
+        SecurityGroups:
+          - !Ref EFSSecurityGroup
+
+    EFSMountTargetResourceAppSubnet1D:
+      Type: AWS::EFS::MountTarget
+      Properties:
+        FileSystemId: !Ref EFSFileSystemResource
+        SubnetId: !FindInMap [TargetAccountMap, !Ref 'AWS::AccountId', AppSubnet1D]
+        SecurityGroups:
+          - !Ref EFSSecurityGroup
+
