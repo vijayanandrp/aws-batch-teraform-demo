@@ -334,6 +334,14 @@
                     - 's3:DeleteStorageLensConfigurationTagging'
                   Resource:
                     - '*'
+                    - !Join ['',['arn:aws:s3:::', Fn::FindInMap: [TargetAccountMap, !Ref 'AWS::AccountId', Env],  'tps3-etl-airflow/*']] 
+                    - !Join ['',['arn:aws:s3:::', Fn::FindInMap: [TargetAccountMap, !Ref 'AWS::AccountId', Env],  'tps3-etl-raw/*']]
+                    - !Join ['',['arn:aws:s3:::', Fn::FindInMap: [TargetAccountMap, !Ref 'AWS::AccountId', Env],  'tps3-etl-stage/*']] 
+                    - !Join ['',['arn:aws:s3:::', Fn::FindInMap: [TargetAccountMap, !Ref 'AWS::AccountId', Env],  'tps3-sftp-incoming/*']]  
+                    - !Join ['',['arn:aws:s3:::', Fn::FindInMap: [TargetAccountMap, !Ref 'AWS::AccountId', Env],  'tps3-etl-airflow']] 
+                    - !Join ['',['arn:aws:s3:::', Fn::FindInMap: [TargetAccountMap, !Ref 'AWS::AccountId', Env],  'tps3-etl-raw']]
+                    - !Join ['',['arn:aws:s3:::', Fn::FindInMap: [TargetAccountMap, !Ref 'AWS::AccountId', Env],  'tps3-etl-stage']]
+                    - !Join ['',['arn:aws:s3:::', Fn::FindInMap: [TargetAccountMap, !Ref 'AWS::AccountId', Env],  'tps3-sftp-incoming']] 
                   Effect: Allow
                 - Action:
                     - "ecr:GetAuthorizationToken"
